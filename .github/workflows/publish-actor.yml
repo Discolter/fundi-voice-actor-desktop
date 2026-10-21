@@ -1,5 +1,6 @@
 name: Build and publish Actor desktop update
 on:
+  pull_request:
   push:
     branches: [main]
     paths:
@@ -54,6 +55,7 @@ jobs:
           go run ./tools/package-release ./app ./dist/actor-app.zip
           if($LASTEXITCODE -ne 0){throw 'Could not assemble release ZIP'}
       - name: Sign release with owner secret
+        if: github.event_name != 'pull_request'
         shell: pwsh
         env:
           ACTOR_SIGNING_SEED_B64: ${{ secrets.ACTOR_SIGNING_SEED_B64 }}
@@ -62,6 +64,7 @@ jobs:
           go run ./tools/sign-release '${{ steps.version.outputs.version }}' ./dist/actor-app.zip ./dist/actor-update.json
           if($LASTEXITCODE -ne 0){throw 'Signing failed'}
       - name: Publish immutable signed GitHub Release
+        if: github.event_name != 'pull_request'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -73,6 +76,7 @@ jobs:
           gh release create $tag dist/actor-app.zip dist/actor-update.json --repo $env:GITHUB_REPOSITORY --title "Fundi Voice Actor $version" --notes "Signed Actor desktop update $version" --latest
           if($LASTEXITCODE -ne 0){throw 'GitHub Release creation failed'}
       - name: Keep CI artifact for diagnostics
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: actor-signed-update-${{ steps.version.outputs.version }}
