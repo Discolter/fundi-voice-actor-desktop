@@ -1,0 +1,70 @@
+name: Build and publish Actor desktop update
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'launcher/**'
+      - 'tools/**'
+      - 'go.mod'
+      - '.github/workflows/publish-actor.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: actor-desktop-signed-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.2'
+      - name: Test updater and compile native Actor
+        shell: pwsh
+        run: |
+          go test ./launcher ./tools/...
+          if($LASTEXITCODE -ne 0){throw 'Updater tests failed'}
+          python .\tools\validate_windows_scripts.py
+          if($LASTEXITCODE -ne 0){throw 'Windows PowerShell script encoding checks failed'}
+          powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\app\Build-Actor.ps1
+          if($LASTEXITCODE -ne 0){throw 'Actor .NET Framework C# compilation failed'}
+      - name: Assemble release archive
+        id: version
+        shell: pwsh
+        run: |
+          $version=(Get-Content .\app\VERSION.txt -TotalCount 1).Trim()
+          if($version -notmatch '^\d+\.\d+\.\d+$'){throw 'Invalid release version'}
+          "version=$version" >> $env:GITHUB_OUTPUT
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          go run ./tools/package-release ./app ./dist/actor-app.zip
+          if($LASTEXITCODE -ne 0){throw 'Could not assemble release ZIP'}
+      - name: Sign release with owner secret
+        shell: pwsh
+        env:
+          ACTOR_SIGNING_SEED_B64: ${{ secrets.ACTOR_SIGNING_SEED_B64 }}
+        run: |
+          if(-not $env:ACTOR_SIGNING_SEED_B64){throw 'Missing ACTOR_SIGNING_SEED_B64. Configure private signing key in Actions secrets.'}
+          go run ./tools/sign-release '${{ steps.version.outputs.version }}' ./dist/actor-app.zip ./dist/actor-update.json
+          if($LASTEXITCODE -ne 0){throw 'Signing failed'}
+      - name: Publish immutable signed GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version='${{ steps.version.outputs.version }}'
+          $tag="v$version"
+          gh release view $tag --repo $env:GITHUB_REPOSITORY 2>$null
+          if($LASTEXITCODE -eq 0){ Write-Host "Release $tag already exists. Bump app/VERSION.txt to publish another."; exit 0 }
+          gh release create $tag dist/actor-app.zip dist/actor-update.json --repo $env:GITHUB_REPOSITORY --title "Fundi Voice Actor $version" --notes "Signed Actor desktop update $version" --latest
+          if($LASTEXITCODE -ne 0){throw 'GitHub Release creation failed'}
+      - name: Keep CI artifact for diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: actor-signed-update-${{ steps.version.outputs.version }}
+          path: |
+            dist/actor-app.zip
+            dist/actor-update.json
+          retention-days: 30
