@@ -1,4 +1,5 @@
 import {formatBytes,storageMeter,transferPanel,fileStatus} from './file-tools.js';
+import {openFileBrowser} from './file-browser.js';
 import {STAGES,THEMES,escapeHTML as e,today,isDebt,dueLabel,stageLabel,matches,selectDebts,groupProjects,reviewedRole,messageKind,hasAssignedRole} from './core.js';
 const paths={projects:'M3 4h7l2 3h9v14H3Z',debts:'m12 3 10 18H2ZM12 9v5M12 18h.01',sync:'M3 11a9 9 0 0 1 15-6l3 3M21 3v5h-5M21 13a9 9 0 0 1-15 6l-3-3M3 21v-5h5',settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM9 3l-1 3-3 1-2 3 2 3-1 3 3 2 3-1 2 4 3-1 1-3 3-1 2-3-2-3 1-3-3-2-3 1-2-4Z',logout:'M9 3H3v18h6M12 12h10m-5-5 5 5-5 5',chevron:'m9 5 7 7-7 7',search:'M21 21l-5-5M17 10a7 7 0 1 0-14 0 7 7 0 0 0 14 0Z',check:'m5 12 4 4L19 6',close:'m6 6 12 12M18 6 6 18'};
 const icon=name=>`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[name]||paths.projects}"/></svg>`;
@@ -158,8 +159,14 @@ document.addEventListener('click',async event=>{
     if(action==='role-recordings')await showActorFiles(button.dataset.role);
     if(action==='refresh-recordings'){state=await api('files/refresh',{});refreshFilesView();}
     if(action==='upload-recording'){
-      button.disabled=true;const result=await api('files/upload',{roleId:button.dataset.role});
+      button.disabled=true;
+      const selected=await openFileBrowser(api,{mode:'file',title:'Выбери запись для отправки'});
+      if(!selected){button.disabled=false;return;}
+      const payload={roleId:button.dataset.role};
+      if(selected.path)payload.path=selected.path;
+      const result=await api('files/upload',payload);
       if(!result.cancelled){state=result;modal.close();render();renderTransferNotice();}
+      else{button.disabled=false;}
     }
     if(action==='confirm-recording'){
       button.disabled=true;state=await api('files/confirm',{fileId:button.dataset.file});refreshFilesView();toast('Запись подтверждена. Отправляем уведомление руководителю…');
