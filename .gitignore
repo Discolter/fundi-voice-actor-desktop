@@ -1,0 +1,11 @@
+# NEVER commit the signing seed. Store it only in GitHub Actions secret ACTOR_SIGNING_SEED_B64.
+ACTOR_SIGNING_SEED_PRIVATE.txt
+*.pfx
+*.pem
+*.key
+/dist/
+/installer/payload.zip
+/package/
+/app/FundiVoiceActor.App.exe
+/app/Uninstall.exe
+*.log

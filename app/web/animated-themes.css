@@ -1,0 +1,39 @@
+
+/* Animated background themes v1: CSS-only, no assets or JavaScript rendering loop. */
+body[data-theme="living-sunset"]{--bg:#111a2a;--side:#132038;--panel:#1b2a41;--panel2:#20334c;--surface:#1b2a41;--surface2:#20334c;--glow1:#69aaff;--glow2:#ff975d;--brand1:#69aaff;--brand2:#ff975d;--line:#36465f;--border:#36465f;--lime:#cde3ff;--text:#f3f6ff;--muted:#aec0d6;--button-text:#10182c;--gradient:linear-gradient(113deg,#69aaff,#b6c2f8 46%,#ff975d)}
+body[data-theme="living-aurora"]{--bg:#0e202b;--side:#122932;--panel:#1b3340;--panel2:#253d4b;--surface:#1b3340;--surface2:#253d4b;--glow1:#30cab1;--glow2:#8a85ff;--brand1:#30cab1;--brand2:#8a85ff;--line:#36465f;--border:#36465f;--lime:#cde3ff;--text:#f3f6ff;--muted:#aec0d6;--button-text:#10182c;--gradient:linear-gradient(113deg,#30cab1,#b6c2f8 46%,#8a85ff)}
+body[data-theme="living-ocean"]{--bg:#0d1c30;--side:#15243b;--panel:#193047;--panel2:#244159;--surface:#193047;--surface2:#244159;--glow1:#2eaaff;--glow2:#38e0ca;--brand1:#2eaaff;--brand2:#38e0ca;--line:#36465f;--border:#36465f;--lime:#cde3ff;--text:#f3f6ff;--muted:#aec0d6;--button-text:#10182c;--gradient:linear-gradient(113deg,#2eaaff,#b6c2f8 46%,#38e0ca)}
+body[data-theme="living-plum"]{--bg:#20182f;--side:#271e3c;--panel:#302542;--panel2:#3e3052;--surface:#302542;--surface2:#3e3052;--glow1:#bd72ff;--glow2:#f482bd;--brand1:#bd72ff;--brand2:#f482bd;--line:#36465f;--border:#36465f;--lime:#cde3ff;--text:#f3f6ff;--muted:#aec0d6;--button-text:#10182c;--gradient:linear-gradient(113deg,#bd72ff,#b6c2f8 46%,#f482bd)}
+
+/* Layered radials visibly travel across the entire app, not just primary buttons. */
+body[data-theme^="living-"] .main,
+body[data-theme^="living-"] .actor-main {
+  background-image:
+    radial-gradient(ellipse 75% 72% at 12% 22%, color-mix(in srgb,var(--glow1) 54%,transparent),transparent 83%),
+    radial-gradient(ellipse 75% 68% at 91% 71%, color-mix(in srgb,var(--glow2) 46%,transparent),transparent 84%),
+    radial-gradient(ellipse 57% 64% at 56% 42%, color-mix(in srgb,var(--glow1) 20%,transparent),transparent 90%),
+    linear-gradient(145deg,var(--bg),color-mix(in srgb,var(--glow2) 18%,var(--bg)),var(--bg));
+  background-size:165% 165%;
+  animation:fundivoice-gradient-drift 34s ease-in-out infinite alternate;
+  min-height:100vh;
+}
+/* The chooser previews move as well, with a slower small-area drift. */
+.theme-preview.living-sunset{background:linear-gradient(130deg,#69aaff,#233858,#ff975d);background-size:220% 220%;animation:fundivoice-gradient-drift 18s ease-in-out infinite alternate;}
+.theme-preview.living-sunset::before{background:radial-gradient(ellipse at 22% 20%,#69aaffcc,transparent 78%),radial-gradient(ellipse at 88% 85%,#ff975daa,transparent 75%);}
+.theme-preview.living-aurora{background:linear-gradient(130deg,#30cab1,#233858,#8a85ff);background-size:220% 220%;animation:fundivoice-gradient-drift 18s ease-in-out infinite alternate;}
+.theme-preview.living-aurora::before{background:radial-gradient(ellipse at 22% 20%,#30cab1cc,transparent 78%),radial-gradient(ellipse at 88% 85%,#8a85ffaa,transparent 75%);}
+.theme-preview.living-ocean{background:linear-gradient(130deg,#2eaaff,#233858,#38e0ca);background-size:220% 220%;animation:fundivoice-gradient-drift 18s ease-in-out infinite alternate;}
+.theme-preview.living-ocean::before{background:radial-gradient(ellipse at 22% 20%,#2eaaffcc,transparent 78%),radial-gradient(ellipse at 88% 85%,#38e0caaa,transparent 75%);}
+.theme-preview.living-plum{background:linear-gradient(130deg,#bd72ff,#233858,#f482bd);background-size:220% 220%;animation:fundivoice-gradient-drift 18s ease-in-out infinite alternate;}
+.theme-preview.living-plum::before{background:radial-gradient(ellipse at 22% 20%,#bd72ffcc,transparent 78%),radial-gradient(ellipse at 88% 85%,#f482bdaa,transparent 75%);}
+
+@keyframes fundivoice-gradient-drift {
+  0%   {background-position:0% 24%;}
+  50%  {background-position:100% 78%;}
+  100% {background-position:18% 100%;}
+}
+body[data-motion="off"][data-theme^="living-"] :is(.main,.actor-main),
+body[data-motion="off"] .theme-preview[class*="living-"] {animation:none!important;}
+@media (prefers-reduced-motion: reduce) {
+  body[data-theme^="living-"] :is(.main,.actor-main),.theme-preview[class*="living-"] {animation:none!important;}
+}
