@@ -156,7 +156,7 @@ namespace FundiVoice {
         // Windows-only, loopback-authenticated and read-only folder enumeration.
         // No cloud endpoint provides this functionality.
         static readonly HashSet<string> LocalAudioExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
-            ".wav", ".flac", ".mp3", ".ogg", ".aac", ".m4a", ".aif", ".aiff", ".zip"
+            ".wav", ".flac", ".mp3", ".ogg", ".zip"
         };
         static readonly HashSet<string> LocalStudioExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
             ".wav", ".flac", ".mp3", ".ogg", ".aac", ".m4a", ".aif", ".aiff", ".zip",
