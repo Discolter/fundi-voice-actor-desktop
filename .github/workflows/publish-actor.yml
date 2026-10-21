@@ -1,5 +1,6 @@
 name: Build and publish Actor desktop update
 on:
+  pull_request:
   push:
     branches: [main]
     paths:
@@ -25,6 +26,15 @@ jobs:
       - name: Check linked theme CSS is served
         shell: pwsh
         run: python ./tools/check-animated-themes.py
+      - name: Verify secure built-in desktop file browser
+        shell: pwsh
+        run: |
+          python ./tools/check-file-browser.py
+          if($LASTEXITCODE -ne 0){ throw 'Desktop file picker regression failed' }
+          node --check ./app/web/file-browser.js
+          if($LASTEXITCODE -ne 0){ throw 'Desktop browser JavaScript syntax failed' }
+          node --check ./app/web/app.js
+          if($LASTEXITCODE -ne 0){ throw 'Desktop app JavaScript syntax failed' }
       - name: Test updater and compile native Actor
         shell: pwsh
         run: |
@@ -45,6 +55,7 @@ jobs:
           go run ./tools/package-release ./app ./dist/actor-app.zip
           if($LASTEXITCODE -ne 0){throw 'Could not assemble release ZIP'}
       - name: Sign release with owner secret
+        if: github.event_name != 'pull_request'
         shell: pwsh
         env:
           ACTOR_SIGNING_SEED_B64: ${{ secrets.ACTOR_SIGNING_SEED_B64 }}
@@ -53,6 +64,7 @@ jobs:
           go run ./tools/sign-release '${{ steps.version.outputs.version }}' ./dist/actor-app.zip ./dist/actor-update.json
           if($LASTEXITCODE -ne 0){throw 'Signing failed'}
       - name: Publish immutable signed GitHub Release
+        if: github.event_name != 'pull_request'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -64,6 +76,7 @@ jobs:
           gh release create $tag dist/actor-app.zip dist/actor-update.json --repo $env:GITHUB_REPOSITORY --title "Fundi Voice Actor $version" --notes "Signed Actor desktop update $version" --latest
           if($LASTEXITCODE -ne 0){throw 'GitHub Release creation failed'}
       - name: Keep CI artifact for diagnostics
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: actor-signed-update-${{ steps.version.outputs.version }}
