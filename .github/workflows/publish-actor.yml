@@ -25,6 +25,15 @@ jobs:
       - name: Check linked theme CSS is served
         shell: pwsh
         run: python ./tools/check-animated-themes.py
+      - name: Verify secure built-in desktop file browser
+        shell: pwsh
+        run: |
+          python ./tools/check-file-browser.py
+          if($LASTEXITCODE -ne 0){ throw 'Desktop file picker regression failed' }
+          node --check ./app/web/file-browser.js
+          if($LASTEXITCODE -ne 0){ throw 'Desktop browser JavaScript syntax failed' }
+          node --check ./app/web/app.js
+          if($LASTEXITCODE -ne 0){ throw 'Desktop app JavaScript syntax failed' }
       - name: Test updater and compile native Actor
         shell: pwsh
         run: |
