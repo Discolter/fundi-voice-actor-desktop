@@ -22,7 +22,7 @@ namespace FundiVoice {
         static readonly ManualResetEvent serverReady=new ManualResetEvent(false);
         static readonly string instanceId=Guid.NewGuid().ToString("N");
         static readonly HashSet<string> files=new HashSet<string>(StringComparer.Ordinal){
-            "/","/index.html","/app.js","/core.js", "/file-tools.js", "/file-tools.css","/actor.css","/themes.css","/brand-mark.png","/favicon.ico","/icon.svg"
+            "/","/index.html","/app.js","/core.js", "/file-tools.js", "/file-tools.css","/actor.css","/themes.css","/animated-themes.css","/brand-mark.png","/favicon.ico","/icon.svg"
         };
         public static void Run(string directory){
             webRoot=Path.Combine(Path.GetFullPath(directory),"web");

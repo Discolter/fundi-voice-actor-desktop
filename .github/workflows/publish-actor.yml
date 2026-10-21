@@ -22,6 +22,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23.2'
+      - name: Check linked theme CSS is served
+        shell: pwsh
+        run: python ./tools/check-animated-themes.py
       - name: Test updater and compile native Actor
         shell: pwsh
         run: |
