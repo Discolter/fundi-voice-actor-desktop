@@ -1,0 +1,6 @@
+Fundi Voice Actor 0.4.8
+
+- Show optional manual dialogue counts on assigned roles (for example, «Реплик: 15»).
+- Unknown counts remain hidden, while an explicitly entered zero displays as zero.
+- No changes to account authentication, recordings, uploads, or notifications.
+- Requires Studio 1.8.16 and Cloud 0.6.4 to publish new role counts.
