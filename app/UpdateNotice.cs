@@ -147,7 +147,7 @@ namespace FundiVoice {
             // Wait for the old host mutex to be released before starting the existing updater.
             string safePath=launcher.Replace("'","''");
             string script="$ErrorActionPreference='SilentlyContinue'; Wait-Process -Id "+pid+
-                " -Timeout 35 -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 1600; Start-Process -FilePath '+safePath+"'";
+                " -Timeout 35 -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 1600; Start-Process -FilePath '"+safePath+"'";
             string powershell=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),"WindowsPowerShell","v1.0","powershell.exe");
             if(!File.Exists(powershell))throw new IOException("Не удалось найти Windows PowerShell для перезапуска.");
             string encoded=Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
