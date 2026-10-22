@@ -15,7 +15,7 @@ if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) {
 $sourceNames = @(
     'Program.cs', 'ActorHost.cs', 'ActorTray.cs', 'ActorDiagnostics.cs',
     'ActorCloud.cs', 'ActorVacations.cs', 'ActorFiles.cs',
-    'FileTransfers.cs', 'CloudCommon.cs', 'ReviewMailbox.cs'
+    'FileTransfers.cs', 'CloudCommon.cs', 'ReviewMailbox.cs', 'UpdateNotice.cs'
 )
 $sourceFiles = @($sourceNames | ForEach-Object { Join-Path $PSScriptRoot $_ })
 foreach ($sourceFile in $sourceFiles) {
