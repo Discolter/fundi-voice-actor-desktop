@@ -34,6 +34,8 @@ jobs:
           node --check ./app/web/file-browser.js
           if($LASTEXITCODE -ne 0){ throw 'Desktop browser JavaScript syntax failed' }
           node --check ./app/web/app.js
+          node ./tools/check-update-restart.mjs
+          if($LASTEXITCODE -ne 0){ throw 'Restart window cleanup test failed' }
           if($LASTEXITCODE -ne 0){ throw 'Desktop app JavaScript syntax failed' }
       - name: Test updater and compile native Actor
         shell: pwsh
