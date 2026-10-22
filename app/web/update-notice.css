@@ -1,0 +1,9 @@
+.fundi-update-notice{position:fixed;right:22px;bottom:22px;z-index:10000;width:min(370px,calc(100vw - 32px));padding:18px;background:var(--surface,#1b2333);color:var(--text,#f4f4f5);border:1px solid var(--border,var(--line,#667085));border-radius:14px;box-shadow:0 16px 60px #0005;font-family:inherit;line-height:1.45}
+.fundi-update-notice strong{display:block;font-size:15px;font-weight:650}
+.fundi-update-notice p{font-size:12px;margin:8px 0 15px;color:var(--muted,#9da4ae)}
+.fundi-update-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px}
+.fundi-update-actions button{font:inherit;font-size:12px;padding:9px 12px;border-radius:9px;cursor:pointer;border:1px solid var(--line,var(--border,#64748b))}
+.fundi-update-later{background:transparent;color:inherit}
+.fundi-update-restart{background:var(--brand1,#3182ff);color:#fff;border-color:transparent!important;font-weight:650}
+.fundi-update-actions button:disabled{opacity:.55;cursor:wait}
+@media(max-width:550px){.fundi-update-notice{right:16px;left:16px;bottom:16px;width:auto}}
