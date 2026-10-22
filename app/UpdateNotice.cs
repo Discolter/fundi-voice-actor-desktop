@@ -94,13 +94,60 @@ namespace FundiVoice {
                 };
             }
         }
+
+        // Edge --app windows are separate from the PowerShell/.NET localhost host.
+        // Stopping the host alone leaves a stale browser window on the desktop.
+        // Only close exact Fundi Voice application windows owned by Microsoft Edge.
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        static extern bool EnumWindows(EnumWindowsCallback callback, IntPtr parameter);
+        delegate bool EnumWindowsCallback(IntPtr window, IntPtr parameter);
+        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet=System.Runtime.InteropServices.CharSet.Unicode)]
+        static extern int GetWindowText(IntPtr window, StringBuilder title, int capacity);
+        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet=System.Runtime.InteropServices.CharSet.Unicode)]
+        static extern int GetClassName(IntPtr window, StringBuilder name, int capacity);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        static extern bool IsWindowVisible(IntPtr window);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        static extern bool PostMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
+
+        internal static bool IsAppWindowTitle(string title, bool actor) {
+            if(actor)return title=="Fundi Voice Actor";
+            return title=="Fundi Voice · Студия" || title=="Fundi Voice - Студия" ||
+                title=="Fundi Voice – Студия" || title=="Fundi Voice — Студия";
+        }
+        public static void CloseOldAppWindows(bool actor) {
+            // Never terminate the browser process: other Edge tabs/apps must survive.
+            EnumWindows(delegate(IntPtr window, IntPtr unused) {
+                try {
+                    if(!IsWindowVisible(window))return true;
+                    var caption=new StringBuilder(300);
+                    if(GetWindowText(window,caption,caption.Capacity)<1 ||
+                       !IsAppWindowTitle(caption.ToString(),actor))return true;
+                    var windowClass=new StringBuilder(100);
+                    GetClassName(window,windowClass,windowClass.Capacity);
+                    if(windowClass.ToString()!="Chrome_WidgetWin_1")return true;
+                    uint pid;
+                    GetWindowThreadProcessId(window,out pid);
+                    if(pid==0)return true;
+                    using(var process=Process.GetProcessById((int)pid)) {
+                        if(!String.Equals(process.ProcessName,"msedge",StringComparison.OrdinalIgnoreCase))
+                            return true;
+                    }
+                    PostMessage(window,0x0010,IntPtr.Zero,IntPtr.Zero); // WM_CLOSE
+                } catch(Exception) { /* A disappearing Edge window is not an update error. */ }
+                return true;
+            },IntPtr.Zero);
+        }
+
         public static void Restart(string directory,string executable) {
             string launcher=Launcher(directory,executable);
             int pid=Process.GetCurrentProcess().Id;
             // Wait for the old host mutex to be released before starting the existing updater.
             string safePath=launcher.Replace("'","''");
             string script="$ErrorActionPreference='SilentlyContinue'; Wait-Process -Id "+pid+
-                " -Timeout 35 -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 700; Start-Process -FilePath '"+safePath+"'";
+                " -Timeout 35 -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 1600; Start-Process -FilePath '+safePath+"'";
             string powershell=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),"WindowsPowerShell","v1.0","powershell.exe");
             if(!File.Exists(powershell))throw new IOException("Не удалось найти Windows PowerShell для перезапуска.");
             string encoded=Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
