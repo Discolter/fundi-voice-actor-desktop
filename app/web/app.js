@@ -1,4 +1,5 @@
 import {formatBytes,storageMeter,transferPanel,fileStatus} from './file-tools.js';
+import {startUpdateNotice} from './update-notice.js';
 import {openFileBrowser} from './file-browser.js';
 import {STAGES,THEMES,escapeHTML as e,today,isDebt,dueLabel,stageLabel,matches,selectDebts,groupProjects,reviewedRole,messageKind,hasAssignedRole} from './core.js';
 const paths={projects:'M3 4h7l2 3h9v14H3Z',debts:'m12 3 10 18H2ZM12 9v5M12 18h.01',sync:'M3 11a9 9 0 0 1 15-6l3 3M21 3v5h-5M21 13a9 9 0 0 1-15 6l-3-3M3 21v-5h5',settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM9 3l-1 3-3 1-2 3 2 3-1 3 3 2 3-1 2 4 3-1 1-3 3-1 2-3-2-3 1-3-3-2-3 1-2-4Z',logout:'M9 3H3v18h6M12 12h10m-5-5 5 5-5 5',chevron:'m9 5 7 7-7 7',search:'M21 21l-5-5M17 10a7 7 0 1 0-14 0 7 7 0 0 0 14 0Z',check:'m5 12 4 4L19 6',close:'m6 6 12 12M18 6 6 18'};
@@ -237,6 +238,9 @@ async function boot(){
   const params=new URLSearchParams(location.hash.slice(1));token=params.get('key')||sessionStorage.getItem('fundi-actor-key')||'';
   if(location.hostname!=='127.0.0.1'||!token){app.innerHTML=empty('Открой приложение','Запусти Fundi Voice Actor с ярлыка или через FundiVoiceActor.exe.');return;}
   sessionStorage.setItem('fundi-actor-key',token);history.replaceState(null,'',location.pathname);
-  try{await update();setInterval(()=>update().catch(()=>{}),1500);}catch(error){app.innerHTML=empty('Не удалось открыть Actor',error.message);}
+  try{await update();startUpdateNotice({api,label:'Actor',beforeRestart:async()=>{
+    if(state.transfer?.state==='running'){toast('Дождись окончания загрузки записи перед обновлением.',true);return false;}
+    return true;
+  }});setInterval(()=>update().catch(()=>{}),1500);}catch(error){app.innerHTML=empty('Не удалось открыть Actor',error.message);}
 }
 boot();
