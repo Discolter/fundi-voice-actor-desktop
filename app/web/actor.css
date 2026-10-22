@@ -39,3 +39,6 @@
 .project-source-link:hover,.project-source-link:focus-visible,.episode-source-link:hover,.episode-source-link:focus-visible{color:#c5e1ff;text-decoration:underline}
 .project-source-link:focus-visible,.episode-source-link:focus-visible{outline:2px solid #91c5ff;outline-offset:3px;border-radius:4px}
 .episode-source-link{display:inline-block;margin-left:9px;font-size:12px;font-weight:600}
+
+/* Clear but unobtrusive per-character manual dialogue count. */
+.role-name .actor-role-lines{display:block;margin-top:5px;color:#9dcaff;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
