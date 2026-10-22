@@ -33,3 +33,9 @@
 .vacation-history-item small,.vacation-history-item p{color:var(--muted);font-size:12px;margin:0;}
 
 .theme-section-heading{font-size:13px;color:var(--muted);margin:17px 0 9px;}
+
+/* Optional Telegram sources are owner-supplied links, separate from expand/collapse. */
+.project-source-link,.episode-source-link{color:#91c5ff;text-decoration:none;text-underline-offset:3px}
+.project-source-link:hover,.project-source-link:focus-visible,.episode-source-link:hover,.episode-source-link:focus-visible{color:#c5e1ff;text-decoration:underline}
+.project-source-link:focus-visible,.episode-source-link:focus-visible{outline:2px solid #91c5ff;outline-offset:3px;border-radius:4px}
+.episode-source-link{display:inline-block;margin-left:9px;font-size:12px;font-weight:600}
