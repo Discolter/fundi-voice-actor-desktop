@@ -283,7 +283,16 @@ namespace FundiVoice {
                 Json(stream,200,cloud.DeleteMessages(ids,all));return;
             }
             if(route=="messages/dismiss-failed"){Json(stream,200,cloud.DismissFailures());return;}
-            if(route=="update/restart"){UpdateNotice.Restart(Path.GetDirectoryName(webRoot),"FundiVoiceActor.exe");Json(stream,200,new{restarting=true});Exit();return;}
+            if(route=="update/restart"){
+                UpdateNotice.Restart(Path.GetDirectoryName(webRoot),"FundiVoiceActor.exe");
+                Json(stream,200,new{restarting=true});
+                ThreadPool.QueueUserWorkItem(delegate {
+                    Thread.Sleep(250);
+                    try {UpdateNotice.CloseOldAppWindows(true);}
+                    finally {Exit();}
+                });
+                return;
+            }
             if(route=="exit"){Json(stream,200,new{closed=true});Exit();return;}
             Json(stream,404,new{error="Неизвестное действие."});
         }
