@@ -250,6 +250,7 @@ namespace FundiVoice {
 
         static void Route(NetworkStream stream,string method,string route,Dictionary<string,object> body){
             if(method=="GET"&&route=="status"){Json(stream,200,cloud.Status());return;}
+            if(method=="GET"&&route=="update/check"){Json(stream,200,UpdateNotice.Check(Path.GetDirectoryName(webRoot),"fundi-voice-actor-desktop","actor-update.json","actor-app.zip","FundiVoiceActor.exe"));return;}
             if(method!="POST"){Json(stream,405,new{error="Неверный способ запроса."});return;}
             if(route=="login"||route=="activate"){Json(stream,200,cloud.Login(body,route=="activate"));return;}
             if(route=="logout"){Json(stream,200,cloud.Logout());return;}
@@ -282,6 +283,7 @@ namespace FundiVoice {
                 Json(stream,200,cloud.DeleteMessages(ids,all));return;
             }
             if(route=="messages/dismiss-failed"){Json(stream,200,cloud.DismissFailures());return;}
+            if(route=="update/restart"){UpdateNotice.Restart(Path.GetDirectoryName(webRoot),"FundiVoiceActor.exe");Json(stream,200,new{restarting=true});Exit();return;}
             if(route=="exit"){Json(stream,200,new{closed=true});Exit();return;}
             Json(stream,404,new{error="Неизвестное действие."});
         }
