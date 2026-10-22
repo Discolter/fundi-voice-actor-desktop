@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const js=readFileSync('app/web/app.js','utf8');
+const css=readFileSync('app/web/actor.css','utf8');
+assert.match(js,/telegramSourceLink/);
+assert.match(js,/project-source-link/);
+assert.match(js,/episode-source-link/);
+assert.match(js,/target="_blank" rel="noopener noreferrer"/);
+assert.match(js,/const projectSource=sources.length===1/);
+assert.match(css,/\.project-source-link/);
+console.log('PASS: Actor desktop source links by anime and series');
