@@ -66,7 +66,7 @@ function renderLogin(){
 function empty(title,text){return `<div class="actor-empty"><div>${icon('projects')}</div><h2>${e(title)}</h2><p>${e(text)}</p></div>`;}
 const telegramSourceLink=url=>typeof url==='string'&&/^https:\/\/(?:t\.me|telegram\.me)\/[A-Za-z0-9_+/-]+\/?$/.test(url);
 function roleSortControl(){
-  return `<label class="actor-role-sort-label" for="actor-role-sort"><span>Сортировка аниме по сумме реплик</span><select id="actor-role-sort" aria-label="Сортировка аниме по суммарному количеству реплик">${ACTOR_ROLE_SORTS.map(([id,label])=>`<option value="${id}" ${ui.roleSort===id?'selected':''}>${e(label)}</option>`).join('')}</select></label>`;
+  return `<label class="actor-role-sort-label" for="actor-role-sort"><span>${ui.page==='debts'?'Сортировка ролей':'Сортировка аниме по сумме реплик'}</span><select id="actor-role-sort" aria-label="${ui.page==='debts'?'Сортировка ролей':'Сортировка аниме по суммарному количеству реплик'}">${ACTOR_ROLE_SORTS.map(([id,label])=>`<option value="${id}" ${ui.roleSort===id?'selected':''}>${e(label)}</option>`).join('')}</select></label>`;
 }
 function renderProjects(all){
   const projects=sortActorProjects(groupProjects(all,ui.query),ui.roleSort);
