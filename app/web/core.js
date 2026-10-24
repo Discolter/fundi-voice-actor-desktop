@@ -72,3 +72,23 @@ export function sortActorRoles(roles,mode='default'){
   });
 }
 
+
+// Sum all assigned character roles across every episode of a project.
+// Unreported counts stay unknown; never interpret them as zero.
+export function actorProjectWorkload(project) {
+  const roles=project?.roles||[];
+  const known=roles.filter(r=>Number.isInteger(r.lineCount)&&r.lineCount>=0);
+  return {total:known.reduce((sum,r)=>sum+r.lineCount,0),
+    known:known.length, missing:roles.length-known.length};
+}
+export function sortActorProjects(projects,mode='default') {
+  const list=[...(projects||[])];
+  if(mode!=='linesAsc'&&mode!=='linesDesc')return list;
+  return list.sort((a,b)=>{
+    const av=actorProjectWorkload(a),bv=actorProjectWorkload(b);
+    if(!av.known&&!bv.known)return a.title.localeCompare(b.title,'ru');
+    if(!av.known)return 1;if(!bv.known)return -1;
+    return (mode==='linesAsc'?av.total-bv.total:bv.total-av.total)
+      ||a.title.localeCompare(b.title,'ru');
+  });
+}
