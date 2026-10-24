@@ -53,3 +53,22 @@ export const KIND_LABELS = Object.freeze({
 export const messageKind=kind=>KIND_LABELS[kind]||'Уведомление от студии';
 // Prevent navigation for a removed/moved role, even if the notification retains a snapshot.
 export const hasAssignedRole=(roles,roleId)=>Boolean(roleId&&Array.isArray(roles)&&roles.some(role=>role.roleId===roleId));
+export const ACTOR_ROLE_SORTS=[
+  ['default','По умолчанию'],
+  ['linesAsc','Сначала меньше реплик'],
+  ['linesDesc','Сначала больше реплик']
+];
+// Keep unreported line counts at the end for both directions; never coerce null to 0.
+export function sortActorRoles(roles,mode='default'){
+  const copy=[...(roles||[])];
+  if(mode!=='linesAsc'&&mode!=='linesDesc')return copy;
+  return copy.sort((a,b)=>{
+    const av=Number.isInteger(a.lineCount)&&a.lineCount>=0?a.lineCount:null;
+    const bv=Number.isInteger(b.lineCount)&&b.lineCount>=0?b.lineCount:null;
+    if(av===null&&bv===null)return 0;
+    if(av===null)return 1;
+    if(bv===null)return -1;
+    return mode==='linesAsc'?av-bv:bv-av;
+  });
+}
+
