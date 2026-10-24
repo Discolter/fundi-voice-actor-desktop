@@ -1,7 +1,7 @@
 import {formatBytes,storageMeter,transferPanel,fileStatus} from './file-tools.js';
 import {startUpdateNotice} from './update-notice.js';
 import {openFileBrowser} from './file-browser.js';
-import {STAGES,THEMES,escapeHTML as e,today,isDebt,dueLabel,stageLabel,matches,selectDebts,groupProjects,reviewedRole,messageKind,hasAssignedRole,actorWorkloadClass} from './core.js';
+import {STAGES,THEMES,escapeHTML as e,today,isDebt,dueLabel,stageLabel,matches,selectDebts,groupProjects,reviewedRole,messageKind,hasAssignedRole,actorWorkloadClass,ACTOR_ROLE_SORTS,sortActorRoles} from './core.js';
 const paths={projects:'M3 4h7l2 3h9v14H3Z',debts:'m12 3 10 18H2ZM12 9v5M12 18h.01',sync:'M3 11a9 9 0 0 1 15-6l3 3M21 3v5h-5M21 13a9 9 0 0 1-15 6l-3-3M3 21v-5h5',settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM9 3l-1 3-3 1-2 3 2 3-1 3 3 2 3-1 2 4 3-1 1-3 3-1 2-3-2-3 1-3-3-2-3 1-2-4Z',logout:'M9 3H3v18h6M12 12h10m-5-5 5 5-5 5',chevron:'m9 5 7 7-7 7',search:'M21 21l-5-5M17 10a7 7 0 1 0-14 0 7 7 0 0 0 14 0Z',check:'m5 12 4 4L19 6',close:'m6 6 12 12M18 6 6 18'};
 const icon=name=>`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[name]||paths.projects}"/></svg>`;
 paths.files='M14 2H5v20h14V7ZM14 2v6h5M8 13h8M8 17h5';
@@ -9,8 +9,8 @@ paths.bell='M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4';
 paths.vacation='M12 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16ZM5 21h14M8 11h8';
 const app=document.querySelector('#app'),modal=document.querySelector('#modal');
 let state={authenticated:false,server:'',username:'',view:null,error:'',lastSync:'',busy:false};
-let ui={page:'projects',query:'',filter:'all',activate:false,theme:'aurora',motion:true,expanded:new Set(),collapsed:new Set()},token='',formBusy=false,lastStatus='';
-try{const saved=JSON.parse(localStorage.getItem('fundi-actor-appearance')||'{}');if(THEMES.some(t=>t[0]===saved.theme))ui.theme=saved.theme;if(saved.motion===false)ui.motion=false;}catch{}
+let ui={page:'projects',query:'',filter:'all',roleSort:'default',activate:false,theme:'aurora',motion:true,expanded:new Set(),collapsed:new Set()},token='',formBusy=false,lastStatus='';
+try{const saved=JSON.parse(localStorage.getItem('fundi-actor-appearance')||'{}');if(THEMES.some(t=>t[0]===saved.theme))ui.theme=saved.theme;if(saved.motion===false)ui.motion=false;if(ACTOR_ROLE_SORTS.some(([id])=>id===saved.roleSort))ui.roleSort=saved.roleSort;}catch{}
 let notificationLimit=50,recordingRoleFilter='',hiddenTransferId='';
 function renderTransferNotice(){document.querySelector('#file-transfer-slot').innerHTML=transferPanel(state.transfer,'actor-',hiddenTransferId);}
 const roles=()=>(Array.isArray(state.view?.feed?.roles)?state.view.feed.roles:[]).map(role=>reviewedRole(role,state.view?.reviews||[],state.mailbox?.pending||[]));
@@ -65,16 +65,19 @@ function renderLogin(){
 }
 function empty(title,text){return `<div class="actor-empty"><div>${icon('projects')}</div><h2>${e(title)}</h2><p>${e(text)}</p></div>`;}
 const telegramSourceLink=url=>typeof url==='string'&&/^https:\/\/(?:t\.me|telegram\.me)\/[A-Za-z0-9_+/-]+\/?$/.test(url);
+function roleSortControl(){
+  return `<label class="actor-role-sort-label" for="actor-role-sort"><span>Сортировка ролей</span><select id="actor-role-sort" aria-label="Сортировка ролей по количеству реплик">${ACTOR_ROLE_SORTS.map(([id,label])=>`<option value="${id}" ${ui.roleSort===id?'selected':''}>${e(label)}</option>`).join('')}</select></label>`;
+}
 function renderProjects(all){
   const projects=groupProjects(all,ui.query);
   if(!projects.length)return empty(ui.query?'Ничего не найдено':'Пока нет назначений',ui.query?'Попробуй другое имя персонажа или проекта.':'Когда руководитель назначит роль, она появится здесь.');
-  return `<div class="project-stack">${projects.map((p,index)=>{
+  return `<div class="actor-role-sort-bar">${roleSortControl()}</div><div class="project-stack">${projects.map((p,index)=>{
     const debt=p.roles.filter(isDebt).length,done=p.roles.filter(r=>r.status==='done').length;
     const sources=[...new Set(p.roles.map(r=>r.sourceUrl).filter(telegramSourceLink))];
     const projectSource=sources.length===1?sources[0]:'';
     const title=projectSource?`<a class="project-source-link" href="${e(projectSource)}" target="_blank" rel="noopener noreferrer" title="Открыть исходники в Telegram">${e(p.title)} ↗</a>`:`${e(p.title)}`;
 
-    return `<details class="actor-project" data-project="${e(p.id)}" ${ui.expanded.has(p.id)||(projects.length<4&&!ui.collapsed.has(p.id))?'open':''}><summary><span class="project-monogram">${e(p.title.slice(0,1))}</span><span class="project-heading"><strong>${title}</strong><small>${p.season?'Сезон '+e(p.season)+' · ':''}${p.episodes.size} сер. · ${p.roles.length} рол.</small></span><span class="project-meta">${debt?`<span class="debt-count">${debt} к записи</span>`:`<span class="all-done">${done===p.roles.length?'Всё принято':'В работе'}</span>`}</span>${icon('chevron')}</summary><div class="project-episodes">${[...p.episodes.values()].sort((a,b)=>Number(a.number)-Number(b.number)).map(ep=>`<section class="actor-episode"><h3>${ep.number?'Серия '+e(ep.number):e(ep.title||'Серия')}${ep.title&&ep.number?` <span>· ${e(ep.title)}</span>`:''}${[...new Set(ep.roles.map(r=>r.sourceUrl).filter(telegramSourceLink))][0]?` <a class="episode-source-link" href="${e([...new Set(ep.roles.map(r=>r.sourceUrl).filter(telegramSourceLink))][0])}" target="_blank" rel="noopener noreferrer">Исходники ↗</a>`:''}</h3><div class="role-list">${ep.roles.map(r=>roleRow(r,false)).join('')}</div></section>`).join('')}</div></details>`;
+    return `<details class="actor-project" data-project="${e(p.id)}" ${ui.expanded.has(p.id)||(projects.length<4&&!ui.collapsed.has(p.id))?'open':''}><summary><span class="project-monogram">${e(p.title.slice(0,1))}</span><span class="project-heading"><strong>${title}</strong><small>${p.season?'Сезон '+e(p.season)+' · ':''}${p.episodes.size} сер. · ${p.roles.length} рол.</small></span><span class="project-meta">${debt?`<span class="debt-count">${debt} к записи</span>`:`<span class="all-done">${done===p.roles.length?'Всё принято':'В работе'}</span>`}</span>${icon('chevron')}</summary><div class="project-episodes">${[...p.episodes.values()].sort((a,b)=>Number(a.number)-Number(b.number)).map(ep=>`<section class="actor-episode"><h3>${ep.number?'Серия '+e(ep.number):e(ep.title||'Серия')}${ep.title&&ep.number?` <span>· ${e(ep.title)}</span>`:''}${[...new Set(ep.roles.map(r=>r.sourceUrl).filter(telegramSourceLink))][0]?` <a class="episode-source-link" href="${e([...new Set(ep.roles.map(r=>r.sourceUrl).filter(telegramSourceLink))][0])}" target="_blank" rel="noopener noreferrer">Исходники ↗</a>`:''}</h3><div class="role-list">${sortActorRoles(ep.roles,ui.roleSort).map(r=>roleRow(r,false)).join('')}</div></section>`).join('')}</div></details>`;
   }).join('')}</div>`;
 }
 function roleRow(role,showProject=true){
@@ -123,9 +126,9 @@ function showMessages(){
 }
 function updateMessageBadge(){const node=document.querySelector('[data-message-count]');if(node){const failed=state.mailbox?.failed?.length||0;node.textContent=unread()||(failed?'!':'');node.hidden=!unread()&&!failed;}}
 function renderDebts(all){
-  const selected=selectDebts(all,{query:ui.query,filter:ui.filter});
+  const selected=sortActorRoles(selectDebts(all,{query:ui.query,filter:ui.filter}),ui.roleSort);
   const filters=[['all','Все'],['waiting','Жду запись'],['retake','На перезапись'],['late','Просрочено']];
-  return `<div class="debt-filters">${filters.map(([id,name])=>`<button data-filter="${id}" class="${ui.filter===id?'active':''}">${name}</button>`).join('')}<span>${selected.length} рол.</span></div>${selected.length?`<div class="role-list debts-list">${selected.map(r=>roleRow(r)).join('')}</div>`:empty('Долгов нет',ui.query||ui.filter!=='all'?'По выбранному фильтру ничего нет.':'Все ожидающие запись и перезапись появятся здесь.')}`;
+  return `<div class="debt-filters">${filters.map(([id,name])=>`<button data-filter="${id}" class="${ui.filter===id?'active':''}">${name}</button>`).join('')}<span>${selected.length} рол.</span></div><div class="actor-role-sort-bar">${roleSortControl()}</div>${selected.length?`<div class="role-list debts-list">${selected.map(r=>roleRow(r)).join('')}</div>`:empty('Долгов нет',ui.query||ui.filter!=='all'?'По выбранному фильтру ничего нет.':'Все ожидающие запись и перезапись появятся здесь.')}`;
 }
 function settings(){
   modal.dataset.view='settings';
@@ -204,13 +207,13 @@ document.addEventListener('click',async event=>{
   }catch(error){toast(error.message,true);}
   finally{if(button.isConnected)button.disabled=false;}
 });
-function saveAppearance(){try{localStorage.setItem('fundi-actor-appearance',JSON.stringify({theme:ui.theme,motion:ui.motion}));}catch{}}
+function saveAppearance(){try{localStorage.setItem('fundi-actor-appearance',JSON.stringify({theme:ui.theme,motion:ui.motion,roleSort:ui.roleSort}));}catch{}}
 document.addEventListener('input',event=>{if(event.target.id==='search'){ui.query=event.target.value;render();}});
 document.addEventListener('toggle',event=>{
   const element=event.target;if(!element.matches?.('details.actor-project'))return;
   const id=element.dataset.project;if(element.open){ui.expanded.add(id);ui.collapsed.delete(id);}else{ui.collapsed.add(id);ui.expanded.delete(id);}
 },true);
-document.addEventListener('change',event=>{if(event.target.id==='motion'){ui.motion=event.target.checked;appearance();saveAppearance();}});
+document.addEventListener('change',event=>{if(event.target.id==='motion'){ui.motion=event.target.checked;appearance();saveAppearance();}if(event.target.id==='actor-role-sort'){ui.roleSort=ACTOR_ROLE_SORTS.some(([id])=>id===event.target.value)?event.target.value:'default';saveAppearance();render();}});
 document.addEventListener('submit',async event=>{
   if(event.target.id==='vacation-create-form'||event.target.id==='vacation-update-form'){
     event.preventDefault();const form=event.target,button=form.querySelector('[type=submit]');
