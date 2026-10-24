@@ -53,3 +53,11 @@
 body[data-theme=light] .role-name .actor-role-lines.line-workload-low{color:#126e43;background:#e1f8ed;border-color:#95d9b6}
 body[data-theme=light] .role-name .actor-role-lines.line-workload-medium{color:#855800;background:#fff4ca;border-color:#e9c970}
 body[data-theme=light] .role-name .actor-role-lines.line-workload-high{color:#a62a39;background:#ffe5e9;border-color:#eca1ad}
+
+/* Persistent workload sorting in both Projects and My Debts, without replacing status filters. */
+.actor-role-sort-bar{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin:0 0 15px}
+.actor-role-sort-label{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
+.actor-role-sort-label select{width:min(280px,65vw);min-height:40px;border:1px solid var(--line);border-radius:10px;
+ background:var(--panel2);color:var(--text);padding:8px 12px;font:inherit;cursor:pointer}
+.actor-role-sort-label select:focus-visible{outline:2px solid var(--brand1);outline-offset:2px}
+@media(max-width:740px){.actor-role-sort-bar{justify-content:stretch}.actor-role-sort-label{width:100%;justify-content:space-between}}
