@@ -3,6 +3,11 @@ export const THEMES=[['slate','Серый'],['graphite','Графит'],['silver
 export const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
 export const isDebt=role=>role.status==='waiting'||role.status==='retake';
+// Traffic-light workload for actor roles; null/unknown never becomes zero.
+export function actorWorkloadClass(lines){
+  if(!Number.isInteger(lines)||lines<0)return 'line-workload-unknown';
+  return lines<=50?'line-workload-low':lines<=100?'line-workload-medium':'line-workload-high';
+}
 export const dueLabel=due=>due?new Date(due+'T12:00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'short'}):'Без срока';
 export const stageLabel=status=>STAGES.find(x=>x[0]===status)?.[1]||'Статус не указан';
 export function reviewedRole(role,reviews=[],pending=[]){

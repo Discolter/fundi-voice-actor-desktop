@@ -41,4 +41,15 @@
 .episode-source-link{display:inline-block;margin-left:9px;font-size:12px;font-weight:600}
 
 /* Clear but unobtrusive per-character manual dialogue count. */
-.role-name .actor-role-lines{display:block;margin-top:5px;color:#9dcaff;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+/* Automatically updated when Studio publishes a role's dialogue count. */
+.role-name .actor-role-lines{
+ display:table;max-width:max-content;margin-top:6px;padding:4px 9px;border-radius:8px;
+ font-size:12px;font-weight:750;line-height:1.5;font-variant-numeric:tabular-nums;
+ border:1px solid transparent
+}
+.role-name .actor-role-lines.line-workload-low{color:#5ee0a0;background:rgba(32,159,100,.19);border-color:rgba(65,199,137,.36)}
+.role-name .actor-role-lines.line-workload-medium{color:#ffd66b;background:rgba(196,142,29,.19);border-color:rgba(234,185,56,.34)}
+.role-name .actor-role-lines.line-workload-high{color:#ff8893;background:rgba(204,67,79,.18);border-color:rgba(244,98,113,.35)}
+body[data-theme=light] .role-name .actor-role-lines.line-workload-low{color:#126e43;background:#e1f8ed;border-color:#95d9b6}
+body[data-theme=light] .role-name .actor-role-lines.line-workload-medium{color:#855800;background:#fff4ca;border-color:#e9c970}
+body[data-theme=light] .role-name .actor-role-lines.line-workload-high{color:#a62a39;background:#ffe5e9;border-color:#eca1ad}
