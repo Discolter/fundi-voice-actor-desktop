@@ -56,7 +56,8 @@ namespace FundiVoice.Desktop {
             return value.GetLeftPart(UriPartial.Authority).TrimEnd(new[]{'/'});
         }
         public static Dictionary<string,object> Request(string server,string path,string method,object body,string token){
-            ServicePointManager.SecurityProtocol=SecurityProtocolType.Tls12;
+            // Respect the OS TLS policy; never weaken certificate verification.
+            ServicePointManager.SecurityProtocol=SecurityProtocolType.SystemDefault;
             var request=(HttpWebRequest)WebRequest.Create(Server(server)+path);
             request.Method=method;request.Timeout=75000;request.ReadWriteTimeout=75000;
             request.AllowAutoRedirect=false;request.KeepAlive=false;
