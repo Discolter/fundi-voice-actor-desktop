@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {ACTOR_ROLE_SORTS,sortActorRoles} from '../app/web/core.js';
+import {ACTOR_ROLE_SORTS,sortActorRoles,sortActorProjects,actorProjectWorkload,groupProjects} from '../app/web/core.js';
 
 const fixture=[
  {roleId:'n',lineCount:null,character:'Unknown'}, {roleId:'t',lineCount:100,character:'Large'},
@@ -20,3 +20,18 @@ for(const needle of ['actor-role-sort','sortActorRoles(ep.roles,ui.roleSort)','s
  assert.ok(app.includes(needle),'Missing UI wiring: '+needle);
 assert.ok(css.includes('.actor-role-sort-bar'));
 console.log('PASS: Actor role workload sort (ascending, descending, unknown last, project and debt views)');
+
+const projectRoles=[
+ {projectId:'alpha',projectTitle:'Альфа',episodeId:'1',lineCount:15,character:'A'},
+ {projectId:'beta',projectTitle:'Бета',episodeId:'1',lineCount:200,character:'B'},
+ {projectId:'alpha',projectTitle:'Альфа',episodeId:'2',lineCount:85,character:'C'},
+ {projectId:'gamma',projectTitle:'Гамма',episodeId:'1',lineCount:null,character:'D'}
+];
+const groups=groupProjects(projectRoles);
+assert.deepEqual(groups.map(x=>x.id),['alpha','beta','gamma']);
+assert.equal(actorProjectWorkload(groups[0]).total,100);
+assert.deepEqual(sortActorProjects(groups,'linesAsc').map(p=>p.id),['alpha','beta','gamma']);
+assert.deepEqual(sortActorProjects(groups,'linesDesc').map(p=>p.id),['beta','alpha','gamma']);
+assert.equal(actorProjectWorkload(groups[2]).known,0);
+assert.deepEqual(groups.map(x=>x.id),['alpha','beta','gamma'],'project ordering must not mutate groups');
+assert.ok(app.includes('sortActorProjects(groupProjects(all,ui.query),ui.roleSort)'));

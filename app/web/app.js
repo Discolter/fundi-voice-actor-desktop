@@ -1,7 +1,7 @@
 import {formatBytes,storageMeter,transferPanel,fileStatus} from './file-tools.js';
 import {startUpdateNotice} from './update-notice.js';
 import {openFileBrowser} from './file-browser.js';
-import {STAGES,THEMES,escapeHTML as e,today,isDebt,dueLabel,stageLabel,matches,selectDebts,groupProjects,reviewedRole,messageKind,hasAssignedRole,actorWorkloadClass,ACTOR_ROLE_SORTS,sortActorRoles} from './core.js';
+import {STAGES,THEMES,escapeHTML as e,today,isDebt,dueLabel,stageLabel,matches,selectDebts,groupProjects,reviewedRole,messageKind,hasAssignedRole,actorWorkloadClass,ACTOR_ROLE_SORTS,sortActorRoles,sortActorProjects,actorProjectWorkload} from './core.js';
 const paths={projects:'M3 4h7l2 3h9v14H3Z',debts:'m12 3 10 18H2ZM12 9v5M12 18h.01',sync:'M3 11a9 9 0 0 1 15-6l3 3M21 3v5h-5M21 13a9 9 0 0 1-15 6l-3-3M3 21v-5h5',settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM9 3l-1 3-3 1-2 3 2 3-1 3 3 2 3-1 2 4 3-1 1-3 3-1 2-3-2-3 1-3-3-2-3 1-2-4Z',logout:'M9 3H3v18h6M12 12h10m-5-5 5 5-5 5',chevron:'m9 5 7 7-7 7',search:'M21 21l-5-5M17 10a7 7 0 1 0-14 0 7 7 0 0 0 14 0Z',check:'m5 12 4 4L19 6',close:'m6 6 12 12M18 6 6 18'};
 const icon=name=>`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[name]||paths.projects}"/></svg>`;
 paths.files='M14 2H5v20h14V7ZM14 2v6h5M8 13h8M8 17h5';
@@ -66,10 +66,10 @@ function renderLogin(){
 function empty(title,text){return `<div class="actor-empty"><div>${icon('projects')}</div><h2>${e(title)}</h2><p>${e(text)}</p></div>`;}
 const telegramSourceLink=url=>typeof url==='string'&&/^https:\/\/(?:t\.me|telegram\.me)\/[A-Za-z0-9_+/-]+\/?$/.test(url);
 function roleSortControl(){
-  return `<label class="actor-role-sort-label" for="actor-role-sort"><span>Сортировка ролей</span><select id="actor-role-sort" aria-label="Сортировка ролей по количеству реплик">${ACTOR_ROLE_SORTS.map(([id,label])=>`<option value="${id}" ${ui.roleSort===id?'selected':''}>${e(label)}</option>`).join('')}</select></label>`;
+  return `<label class="actor-role-sort-label" for="actor-role-sort"><span>${ui.page==='debts'?'Сортировка ролей':'Сортировка аниме по сумме реплик'}</span><select id="actor-role-sort" aria-label="${ui.page==='debts'?'Сортировка ролей':'Сортировка аниме по суммарному количеству реплик'}">${ACTOR_ROLE_SORTS.map(([id,label])=>`<option value="${id}" ${ui.roleSort===id?'selected':''}>${e(label)}</option>`).join('')}</select></label>`;
 }
 function renderProjects(all){
-  const projects=groupProjects(all,ui.query);
+  const projects=sortActorProjects(groupProjects(all,ui.query),ui.roleSort);
   if(!projects.length)return empty(ui.query?'Ничего не найдено':'Пока нет назначений',ui.query?'Попробуй другое имя персонажа или проекта.':'Когда руководитель назначит роль, она появится здесь.');
   return `<div class="actor-role-sort-bar">${roleSortControl()}</div><div class="project-stack">${projects.map((p,index)=>{
     const debt=p.roles.filter(isDebt).length,done=p.roles.filter(r=>r.status==='done').length;
@@ -77,7 +77,7 @@ function renderProjects(all){
     const projectSource=sources.length===1?sources[0]:'';
     const title=projectSource?`<a class="project-source-link" href="${e(projectSource)}" target="_blank" rel="noopener noreferrer" title="Открыть исходники в Telegram">${e(p.title)} ↗</a>`:`${e(p.title)}`;
 
-    return `<details class="actor-project" data-project="${e(p.id)}" ${ui.expanded.has(p.id)||(projects.length<4&&!ui.collapsed.has(p.id))?'open':''}><summary><span class="project-monogram">${e(p.title.slice(0,1))}</span><span class="project-heading"><strong>${title}</strong><small>${p.season?'Сезон '+e(p.season)+' · ':''}${p.episodes.size} сер. · ${p.roles.length} рол.</small></span><span class="project-meta">${debt?`<span class="debt-count">${debt} к записи</span>`:`<span class="all-done">${done===p.roles.length?'Всё принято':'В работе'}</span>`}</span>${icon('chevron')}</summary><div class="project-episodes">${[...p.episodes.values()].sort((a,b)=>Number(a.number)-Number(b.number)).map(ep=>`<section class="actor-episode"><h3>${ep.number?'Серия '+e(ep.number):e(ep.title||'Серия')}${ep.title&&ep.number?` <span>· ${e(ep.title)}</span>`:''}${[...new Set(ep.roles.map(r=>r.sourceUrl).filter(telegramSourceLink))][0]?` <a class="episode-source-link" href="${e([...new Set(ep.roles.map(r=>r.sourceUrl).filter(telegramSourceLink))][0])}" target="_blank" rel="noopener noreferrer">Исходники ↗</a>`:''}</h3><div class="role-list">${sortActorRoles(ep.roles,ui.roleSort).map(r=>roleRow(r,false)).join('')}</div></section>`).join('')}</div></details>`;
+    return `<details class="actor-project" data-project="${e(p.id)}" ${ui.expanded.has(p.id)||(projects.length<4&&!ui.collapsed.has(p.id))?'open':''}><summary><span class="project-monogram">${e(p.title.slice(0,1))}</span><span class="project-heading"><strong>${title}</strong><small>${p.season?'Сезон '+e(p.season)+' · ':''}${p.episodes.size} сер. · ${p.roles.length} рол. · ${actorProjectWorkload(p).known?`Σ ${actorProjectWorkload(p).total} репл.${actorProjectWorkload(p).missing?' (частично)':''}`:'Реплики не указаны'}</small></span><span class="project-meta">${debt?`<span class="debt-count">${debt} к записи</span>`:`<span class="all-done">${done===p.roles.length?'Всё принято':'В работе'}</span>`}</span>${icon('chevron')}</summary><div class="project-episodes">${[...p.episodes.values()].sort((a,b)=>Number(a.number)-Number(b.number)).map(ep=>`<section class="actor-episode"><h3>${ep.number?'Серия '+e(ep.number):e(ep.title||'Серия')}${ep.title&&ep.number?` <span>· ${e(ep.title)}</span>`:''}${[...new Set(ep.roles.map(r=>r.sourceUrl).filter(telegramSourceLink))][0]?` <a class="episode-source-link" href="${e([...new Set(ep.roles.map(r=>r.sourceUrl).filter(telegramSourceLink))][0])}" target="_blank" rel="noopener noreferrer">Исходники ↗</a>`:''}</h3><div class="role-list">${sortActorRoles(ep.roles,ui.roleSort).map(r=>roleRow(r,false)).join('')}</div></section>`).join('')}</div></details>`;
   }).join('')}</div>`;
 }
 function roleRow(role,showProject=true){
