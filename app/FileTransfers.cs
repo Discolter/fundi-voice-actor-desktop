@@ -70,7 +70,8 @@ namespace FundiVoice.Desktop {
             return uri;
         }
         static HttpWebRequest Create(string url,string method){
-            ServicePointManager.SecurityProtocol=SecurityProtocolType.Tls12;
+            // Let Windows negotiate current TLS versions (TLS 1.2 / 1.3) and verify the certificate.
+            ServicePointManager.SecurityProtocol=SecurityProtocolType.SystemDefault;
             var request=(HttpWebRequest)WebRequest.Create(Address(url));
             request.Method=method;request.AllowAutoRedirect=false;request.KeepAlive=false;
             // Timeout covers the WHOLE synchronous request, including the streamed body.
@@ -87,8 +88,10 @@ namespace FundiVoice.Desktop {
                 return "Хранилище вернуло ошибку HTTP "+status+". Повтори передачу.";
             }
             if(problem.Status==WebExceptionStatus.Timeout)return "Истекло время ожидания передачи. Проверь соединение и повтори.";
-            if(problem.Status==WebExceptionStatus.TrustFailure||problem.Status==WebExceptionStatus.SecureChannelFailure)
-                return "Не удалось установить защищённое соединение с хранилищем. Проверь дату Windows и соединение.";
+            if(problem.Status==WebExceptionStatus.TrustFailure)
+                return "Windows отклонила сертификат Cloudflare R2. Проверь часы, корневые сертификаты Windows и HTTPS-проверку антивируса.";
+            if(problem.Status==WebExceptionStatus.SecureChannelFailure)
+                return "Не удалось согласовать TLS с Cloudflare R2. Проверь обновления Windows, VPN/прокси и повтори скачивание.";
             return "Соединение с хранилищем прервалось. Выбери тот же файл повторно.";
         }
         public static void Upload(string url,string source,long expected,TransferJob job){
