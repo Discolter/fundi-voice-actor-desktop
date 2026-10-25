@@ -92,3 +92,13 @@ export function sortActorProjects(projects,mode='default') {
       ||a.title.localeCompare(b.title,'ru');
   });
 }
+
+export function acceptedHiddenRoles(roles,hiddenRoleIds){
+  const hidden=new Set(hiddenRoleIds||[]);
+  return (roles||[]).filter(role=>role.status==='done'&&hidden.has(role.roleId));
+}
+export function visibleAcceptedRoles(roles,hiddenRoleIds){
+  const hidden=new Set(hiddenRoleIds||[]);
+  // A reopened role must become visible even if it was previously archived.
+  return (roles||[]).filter(role=>role.status!=='done'||!hidden.has(role.roleId));
+}
