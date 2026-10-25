@@ -40,6 +40,7 @@ jobs:
           node ./tools/check-telegram-sources.mjs
           if($LASTEXITCODE -ne 0){ throw 'Telegram sources Actor UI check failed' }
           node --check ./app/web/app.js
+          node ./tools/check-role-age.mjs
           node ./tools/check-update-restart.mjs
           if($LASTEXITCODE -ne 0){ throw 'Restart window cleanup test failed' }
           if($LASTEXITCODE -ne 0){ throw 'Desktop app JavaScript syntax failed' }
