@@ -7,6 +7,7 @@ export function ageInfo(value, now=new Date()){
   const dateOnly=d=>Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate());
   const today=dateOnly(now),initial=dateOnly(start);
   if(!Number.isFinite(today))return null;
+  if(initial>today)return {days:0,label:'0 дн.',level:'green',date:start.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'})};
   const days=Math.max(0,Math.floor((today-initial)/86400000));
   const s=new Date(initial),n=new Date(today);
   let months=(n.getUTCFullYear()-s.getUTCFullYear())*12+n.getUTCMonth()-s.getUTCMonth();
