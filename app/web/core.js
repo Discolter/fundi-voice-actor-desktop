@@ -1,4 +1,4 @@
-export const STAGES=[['waiting','Жду запись'],['recording','В записи'],['received','Получено'],['processing','Обрабатывается'],['retake','На перезапись'],['done','Принято']];
+export const STAGES=[['waiting','Жду запись'],['recording','В записи'],['received','Получено'],['processing','Обрабатываю'],['retake','На перезапись'],['done','Принято']];
 export const THEMES=[['slate','Серый'],['graphite','Графит'],['silver','Серебро'],['forest','Лесной'],['plum','Сливовый'],['ocean','Океан'],['aurora','Fundi Original'],['midnight','Полночь'],['gold','Золотой час'],['light','Светлая'],['sunset','Закат'],['mintwave','Мятный градиент'],['twilight','Сумерки'],['rose','Розовый градиент'],['living-sunset','Живой сине-оранжевый'],['living-aurora','Живое сияние'],['living-ocean','Живой океан'],['living-plum','Живая плазма']];
 export const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
@@ -13,7 +13,7 @@ export const stageLabel=status=>STAGES.find(x=>x[0]===status)?.[1]||'Стату�
 export function reviewedRole(role,reviews=[],pending=[]){
   const review=reviews.find(item=>item.roleId===role.roleId)||null;
   const queued=pending.some(item=>item.operation==='submit'&&item.body?.roleId===role.roleId);
-  const status=queued?'received':review?.state==='pending'?'received':review?.state==='retake'?'retake':review?.state==='accepted'?'done':role.status==='processed'?'processing':role.status;
+  const status=queued?'received':review?.state==='pending'?'received':review?.state==='accepted'?'done':role.status==='recording'?'recording':review?.state==='retake'?'retake':role.status==='processed'?'processing':role.status;
   return {...role,status,review,queued,reviewLabel:queued?'Ожидает отправки':review?.state==='pending'?'На проверке':stageLabel(status)};
 }
 export const matches=(role,query)=>query.trim().toLocaleLowerCase('ru').split(/\s+/).every(part=>[role.projectTitle,role.character,role.episodeNumber,role.episodeTitle].join(' ').toLocaleLowerCase('ru').includes(part));
