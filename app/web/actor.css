@@ -74,3 +74,8 @@ body[data-theme="light"] .fv-age-red{color:#a92e43;background:#ffe5e9}
 .fv-project-age{margin-top:8px}
 
 .fv-age-date{display:inline-block;margin-left:5px;font-size:10px;font-weight:500;opacity:.8;border-left:1px solid currentColor;padding-left:7px;letter-spacing:0}
+
+/* Actor-controlled start-recording flag. This is NOT the recording submission button. */
+.actor-recording-check{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid rgba(101,167,245,.34);border-radius:9px;background:rgba(78,135,220,.13);font-size:12px;font-weight:650;white-space:nowrap;cursor:pointer}
+.actor-recording-check input{width:18px;height:18px;accent-color:#79b5ff;cursor:pointer}
+.actor-recording-check:has(input:disabled){opacity:.65;cursor:wait}
