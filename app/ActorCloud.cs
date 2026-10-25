@@ -60,6 +60,19 @@ namespace FundiVoice {
             return Status();
         }
         public object SyncNow(){Poll();return Status();}
+        public object SetRecording(string roleId,bool recording){
+            lock(syncGate){
+                if(!Authenticated())throw new CloudFault(401,"login_required","Сначала войди в аккаунт.");
+                // Refresh token and current feed before sending a role-specific change.
+                Poll();
+                string server,access;
+                lock(gate){server=JsonData.S(session,"server");access=JsonData.S(session,"accessToken");}
+                if(String.IsNullOrEmpty(access))throw new CloudFault(401,"session_expired","Войди в аккаунт заново.");
+                CloudHttp.Request(server,"/v1/actor/recording","POST",new{roleId=roleId,recording=recording},access);
+                Poll();
+                return Status();
+            }
+        }
         public object Logout(){
             string server,refresh;
             lock(syncGate)lock(gate){
