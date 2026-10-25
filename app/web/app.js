@@ -8,11 +8,12 @@ const icon=name=>`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[n
 paths.files='M14 2H5v20h14V7ZM14 2v6h5M8 13h8M8 17h5';
 paths.bell='M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4';
 paths.vacation='M12 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16ZM5 21h14M8 11h8';
+paths.history='M3 4h18v5H3zM5 9v11h14V9M9 13h6M10 3v3M14 3v3';
 const app=document.querySelector('#app'),modal=document.querySelector('#modal');
 let state={authenticated:false,server:'',username:'',view:null,error:'',lastSync:'',busy:false};
 let ui={page:'projects',query:'',filter:'all',roleSort:'default',activate:false,theme:'aurora',motion:true,expanded:new Set(),collapsed:new Set()},token='',formBusy=false,lastStatus='';
 try{const saved=JSON.parse(localStorage.getItem('fundi-actor-appearance')||'{}');if(THEMES.some(t=>t[0]===saved.theme))ui.theme=saved.theme;if(saved.motion===false)ui.motion=false;if(ACTOR_ROLE_SORTS.some(([id])=>id===saved.roleSort))ui.roleSort=saved.roleSort;}catch{}
-let notificationLimit=50,recordingRoleFilter='',hiddenTransferId='',showHiddenAccepted=false;
+let notificationLimit=50,recordingRoleFilter='',hiddenTransferId='';
 function renderTransferNotice(){document.querySelector('#file-transfer-slot').innerHTML=transferPanel(state.transfer,'actor-',hiddenTransferId);}
 const roles=()=>(Array.isArray(state.view?.feed?.roles)?state.view.feed.roles:[]).map(role=>reviewedRole(role,state.view?.reviews||[],state.mailbox?.pending||[]));
 const unread=()=>Number(state.mailbox?.unread)||0;
@@ -55,9 +56,9 @@ function vacationView(){
 function render(){
   appearance();
   if(!state.authenticated){renderLogin();return;}
-  const all=roles(),active=visibleAcceptedRoles(all,state.view?.hiddenRoleIds),debts=active.filter(isDebt),projects=groupProjects(active);
+  const all=roles(),active=visibleAcceptedRoles(all,state.view?.hiddenRoleIds),archived=acceptedHiddenRoles(all,state.view?.hiddenRoleIds),debts=active.filter(isDebt),projects=groupProjects(active);
   const focused=document.activeElement?.id==='search',caret=focused?document.activeElement.selectionStart:0;
-  app.innerHTML=`<div class="actor-shell"><aside class="actor-sidebar"><div class="actor-brand"><img src="brand-mark.png" alt=""><span>Fundi Voice<small>Actor</small></span></div><nav><button class="nav-item ${ui.page==='projects'?'active':''}" data-page="projects">${icon('projects')}<span>Проекты</span><b>${projects.length}</b></button><button class="nav-item ${ui.page==='debts'?'active':''}" data-page="debts">${icon('debts')}<span>Мои долги</span><b>${debts.length}</b></button><button class="nav-item ${ui.page==='files'?'active':''}" data-action="recordings" aria-current="${ui.page==='files'?'page':'false'}">${icon('files')}<span>Мои файлы</span></button></nav><div class="actor-profile"><div class="profile-initial">${e(state.username.slice(0,1).toUpperCase())}</div><div><strong>${e(state.username)}</strong><small>Актёр студии</small></div><button class="icon-btn" data-action="settings" aria-label="Настройки" title="Настройки">${icon('settings')}</button></div><button class="nav-item vacation-sidebar ${ui.page==='vacation'?'active':''}" data-page="vacation">${icon('vacation')}<span>Отпуск</span>${state.vacation?.current?.status==='active'?'<b>В отпуске</b>':''}</button></aside><main class="actor-main"><header class="actor-top"><div><span class="eyebrow">ЛИЧНОЕ ПРОСТРАНСТВО</span><h1>${ui.page==='vacation'?'Отпуск':ui.page==='files'?'Мои файлы':ui.page==='projects'?'Твои проекты':'Мои долги'}</h1></div><div class="actor-tools"><button class="icon-btn notification-bell" data-action="messages" aria-label="Уведомления" title="Уведомления">${icon('bell')}<b data-message-count ${unread()||state.mailbox?.failed?.length?'':'hidden'}>${unread()||(state.mailbox?.failed?.length?'!':'')}</b></button><label class="actor-search">${icon('search')}<input id="search" placeholder="Найти роль или проект" value="${e(ui.query)}"></label><button class="btn ghost icon-text" data-action="sync" ${state.busy?'disabled':''}>${icon('sync')}${state.busy?'Обновляем…':'Обновить'}</button></div></header><div class="sync-line"><span class="sync-dot ${state.error?'offline':''}"></span><span>${state.error?'Нет свежего обновления':'Обновлено'} · ${e(stamp(state.lastSync))}</span></div>${state.error?`<div class="offline-note">${e(state.error)} Сохранённые назначения доступны для просмотра.</div>`:''}<div class="actor-content">${ui.page==='vacation'?vacationView():ui.page==='files'?actorFilesContent(''):ui.page==='projects'?renderProjects(active,acceptedHiddenRoles(all,state.view?.hiddenRoleIds)):renderDebts(active)}</div><footer>Назначения обновляются раз в минуту, пока приложение работает. Закрытие окна оставляет приложение в трее.</footer></main></div>`;
+  app.innerHTML=`<div class="actor-shell"><aside class="actor-sidebar"><div class="actor-brand"><img src="brand-mark.png" alt=""><span>Fundi Voice<small>Actor</small></span></div><nav><button class="nav-item ${ui.page==='projects'?'active':''}" data-page="projects">${icon('projects')}<span>Проекты</span><b>${projects.length}</b></button><button class="nav-item ${ui.page==='debts'?'active':''}" data-page="debts">${icon('debts')}<span>Мои долги</span><b>${debts.length}</b></button><button class="nav-item ${ui.page==='history'?'active':''}" data-page="history">${icon('history')}<span>История</span><b>${archived.length}</b></button><button class="nav-item ${ui.page==='files'?'active':''}" data-action="recordings" aria-current="${ui.page==='files'?'page':'false'}">${icon('files')}<span>Мои файлы</span></button></nav><div class="actor-profile"><div class="profile-initial">${e(state.username.slice(0,1).toUpperCase())}</div><div><strong>${e(state.username)}</strong><small>Актёр студии</small></div><button class="icon-btn" data-action="settings" aria-label="Настройки" title="Настройки">${icon('settings')}</button></div><button class="nav-item vacation-sidebar ${ui.page==='vacation'?'active':''}" data-page="vacation">${icon('vacation')}<span>Отпуск</span>${state.vacation?.current?.status==='active'?'<b>В отпуске</b>':''}</button></aside><main class="actor-main"><header class="actor-top"><div><span class="eyebrow">ЛИЧНОЕ ПРОСТРАНСТВО</span><h1>${ui.page==='vacation'?'Отпуск':ui.page==='files'?'Мои файлы':ui.page==='projects'?'Твои проекты':ui.page==='history'?'История ролей':'Мои долги'}</h1></div><div class="actor-tools"><button class="icon-btn notification-bell" data-action="messages" aria-label="Уведомления" title="Уведомления">${icon('bell')}<b data-message-count ${unread()||state.mailbox?.failed?.length?'':'hidden'}>${unread()||(state.mailbox?.failed?.length?'!':'')}</b></button><label class="actor-search">${icon('search')}<input id="search" placeholder="Найти роль или проект" value="${e(ui.query)}"></label><button class="btn ghost icon-text" data-action="sync" ${state.busy?'disabled':''}>${icon('sync')}${state.busy?'Обновляем…':'Обновить'}</button></div></header><div class="sync-line"><span class="sync-dot ${state.error?'offline':''}"></span><span>${state.error?'Нет свежего обновления':'Обновлено'} · ${e(stamp(state.lastSync))}</span></div>${state.error?`<div class="offline-note">${e(state.error)} Сохранённые назначения доступны для просмотра.</div>`:''}<div class="actor-content">${ui.page==='vacation'?vacationView():ui.page==='files'?actorFilesContent(''):ui.page==='projects'?renderProjects(active):ui.page==='history'?renderHistory(archived):renderDebts(active)}</div><footer>Назначения обновляются раз в минуту, пока приложение работает. Закрытие окна оставляет приложение в трее.</footer></main></div>`;
   if(focused){const input=document.querySelector('#search');input.focus();input.setSelectionRange(caret,caret);}
 }
 function renderLogin(){
@@ -69,11 +70,9 @@ const telegramSourceLink=url=>typeof url==='string'&&/^https:\/\/(?:t\.me|telegr
 function roleSortControl(){
   return `<label class="actor-role-sort-label" for="actor-role-sort"><span>${ui.page==='debts'?'Сортировка ролей':'Сортировка аниме по сумме реплик'}</span><select id="actor-role-sort" aria-label="${ui.page==='debts'?'Сортировка ролей':'Сортировка аниме по суммарному количеству реплик'}">${ACTOR_ROLE_SORTS.map(([id,label])=>`<option value="${id}" ${ui.roleSort===id?'selected':''}>${e(label)}</option>`).join('')}</select></label>`;
 }
-function renderProjects(all,hidden=[]){
+function renderProjects(all){
   const projects=sortActorProjects(groupProjects(all,ui.query),ui.roleSort);
-  const hiddenRoles=hidden.filter(role=>matches(role,ui.query));
-  const hiddenPanel=`<section class="actor-hidden-roles"><button type="button" class="btn ghost" data-action="toggle-hidden-roles" aria-expanded="${showHiddenAccepted}">${showHiddenAccepted?'Скрыть архив':'Скрытые принятые роли'} (${hiddenRoles.length}) ${icon('chevron')}</button>${showHiddenAccepted?`<div class="role-list">${hiddenRoles.map(r=>roleRow(r,true,true)).join('')||'<p class="muted">Скрытых ролей нет.</p>'}</div>`:''}</section>`;
-  if(!projects.length)return empty(ui.query?'Ничего не найдено':'Нет активных назначений',ui.query?'Попробуй другой запрос.':'Принятые роли можно вернуть через раздел ниже.')+hiddenPanel;
+  if(!projects.length)return empty(ui.query?'Ничего не найдено':'Нет ролей в проектах',ui.query?'Попробуй другой запрос.':'Принятые роли могут находиться во вкладке «История».');
   return `<div class="actor-role-sort-bar">${roleSortControl()}</div><div class="project-stack">${projects.map((p,index)=>{
     const debt=p.roles.filter(isDebt).length,done=p.roles.filter(r=>r.status==='done').length;
     const sources=[...new Set(p.roles.map(r=>r.sourceUrl).filter(telegramSourceLink))];
@@ -81,7 +80,21 @@ function renderProjects(all,hidden=[]){
     const title=projectSource?`<a class="project-source-link" href="${e(projectSource)}" target="_blank" rel="noopener noreferrer" title="Открыть исходники в Telegram">${e(p.title)} ↗</a>`:`${e(p.title)}`;
 
     return `<details class="actor-project" data-project="${e(p.id)}" ${ui.expanded.has(p.id)||(projects.length<4&&!ui.collapsed.has(p.id))?'open':''}><summary><span class="project-monogram">${e(p.title.slice(0,1))}</span><span class="project-heading"><strong>${title}</strong><small>${p.season?'Сезон '+e(p.season)+' · ':''}${p.episodes.size} сер. · ${p.roles.length} рол. · ${actorProjectWorkload(p).known?`Σ ${actorProjectWorkload(p).total} репл.${actorProjectWorkload(p).missing?' (частично)':''}`:'Реплики не указаны'}</small></span><span class="project-meta">${ageBadge(p.roles[0]?.projectCreatedAt,true)}${debt?`<span class="debt-count">${debt} к записи</span>`:`<span class="all-done">${done===p.roles.length?'Всё принято':'В работе'}</span>`}</span>${icon('chevron')}</summary><div class="project-episodes">${[...p.episodes.values()].sort((a,b)=>Number(a.number)-Number(b.number)).map(ep=>`<section class="actor-episode"><h3>${ep.number?'Серия '+e(ep.number):e(ep.title||'Серия')}${ep.title&&ep.number?` <span>· ${e(ep.title)}</span>`:''}${[...new Set(ep.roles.map(r=>r.sourceUrl).filter(telegramSourceLink))][0]?` <a class="episode-source-link" href="${e([...new Set(ep.roles.map(r=>r.sourceUrl).filter(telegramSourceLink))][0])}" target="_blank" rel="noopener noreferrer">Исходники ↗</a>`:''}</h3><div class="role-list">${sortActorRoles(ep.roles,ui.roleSort).map(r=>roleRow(r,false)).join('')}</div></section>`).join('')}</div></details>`;
-  }).join('')}</div>${hiddenPanel}`;
+  }).join('')}</div>`;
+}
+function renderHistory(hiddenRoles){
+  const filtered=hiddenRoles.filter(r=>matches(r,ui.query));
+  if(!filtered.length)return empty(ui.query?'В истории ничего не найдено':'История пока пуста',
+    ui.query?'Попробуй другой запрос.':'Здесь будут находиться принятые роли, скрытые тобой или руководителем.');
+  const projects=groupProjects(filtered);
+  return `<section class="actor-history-intro"><div>${icon('history')}<strong>Завершённые роли</strong></div><p>Эти роли скрыты из активных проектов, но сохранены в студии. Ты или руководитель можете вернуть любую роль обратно.</p></section>
+    <div class="actor-history-stack">${[...projects.values()].map(p=>`<section class="actor-history-project">
+      <h2>${e(p.title)}${p.season?' · Сезон '+e(p.season):''}</h2>
+      ${[...p.episodes.values()].sort((a,b)=>Number(a.number||0)-Number(b.number||0)).map(ep=>`<div class="actor-history-episode">
+      <h3>${ep.number?'Серия '+e(ep.number):e(ep.title||'Серия')}${ep.title&&ep.number?' · '+e(ep.title):''}</h3>
+      <div class="actor-history-role-list">${ep.roles.map(r=>roleRow(r,true,true)).join('')}</div>
+      </div>`).join('')}
+    </section>`).join('')}</div>`;
 }
 function roleRow(role,showProject=true,hidden=false){
   const late=role.due&&role.due<today()&&isDebt(role);
@@ -176,12 +189,12 @@ document.addEventListener('click',async event=>{
     if(action==='messages')showMessages();
     if(action==='more-messages'){notificationLimit+=50;showMessages();}
     if(action==='dismiss-failed'){state=await api('messages/dismiss-failed',{});showMessages();updateMessageBadge();}
-    if(action==='toggle-hidden-roles'){showHiddenAccepted=!showHiddenAccepted;render();}
+    
     if(action==='role-visibility'){
       button.disabled=true;
       const hidden=button.dataset.hidden==='true';
       state=await api('roles/visibility',{roleId:button.dataset.role,hidden});
-      render();toast(hidden?'Роль скрыта из кабинета. Её можно вернуть через «Скрытые принятые роли».':'Роль возвращена в кабинет.');
+      render();toast(hidden?'Роль перемещена во вкладку «История».':'Роль возвращена в «Проекты».');
     }
     if(action==='submit-role')showSubmission(button.dataset.role);
     if(action==='recordings')await showActorFiles();
@@ -217,7 +230,7 @@ document.addEventListener('click',async event=>{
     if(action==='message-role'){
       state=await api('messages/read',{id:Number(button.dataset.message)});
       const role=roles().find(item=>item.roleId===button.dataset.role);modal.close();
-      if(role){ui.page='projects';ui.query=role.character;ui.expanded.add(role.projectId);ui.collapsed.delete(role.projectId);render();}
+      if(role){ui.page=(state.view?.hiddenRoleIds||[]).includes(role.roleId)?'history':'projects';ui.query=role.character;ui.expanded.add(role.projectId);ui.collapsed.delete(role.projectId);render();}
       else{render();toast('Эта роль больше не назначена тебе.');}
     }
     if(action==='sync'){button.disabled=true;await update(true);toast(state.error||'Роли обновлены',!!state.error);}
