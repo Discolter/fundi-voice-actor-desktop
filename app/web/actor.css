@@ -72,3 +72,5 @@ body[data-theme="light"] .fv-age-green{color:#116d43;background:#e0f7ea}
 body[data-theme="light"] .fv-age-yellow{color:#8a5900;background:#fff2c8}
 body[data-theme="light"] .fv-age-red{color:#a92e43;background:#ffe5e9}
 .fv-project-age{margin-top:8px}
+
+.fv-age-date{display:inline-block;margin-left:5px;font-size:10px;font-weight:500;opacity:.8;border-left:1px solid currentColor;padding-left:7px;letter-spacing:0}
