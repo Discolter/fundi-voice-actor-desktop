@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {STAGES,reviewedRole} from '../app/web/core.js';
+const app=readFileSync(new URL('../app/web/app.js',import.meta.url),'utf8');
+const host=readFileSync(new URL('../app/ActorHost.cs',import.meta.url),'utf8');
+const cloud=readFileSync(new URL('../app/ActorCloud.cs',import.meta.url),'utf8');
+const css=readFileSync(new URL('../app/web/actor.css',import.meta.url),'utf8');
+assert.deepEqual(STAGES.map(([id])=>id),['waiting','recording','received','processing','retake','done']);
+assert.match(app,/class="recording-toggle"/);
+assert.match(app,/data-role/);
+assert.match(app,/\['waiting','retake','recording'\]/);
+assert.match(app,/api\('recording',\{roleId:input\.dataset\.role,recording:desired\}\)/);
+assert.match(host,/route=="recording"/);
+assert.match(cloud,/\/v1\/actor\/recording/);
+assert.match(css,/\.actor-recording-check/);
+assert.doesNotMatch(app,/\['waiting','retake','recording','done'\]/);
+console.log('PASS Actor recording controls: eligible roles and authenticated endpoint');
