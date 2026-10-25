@@ -23,9 +23,9 @@ export function ageInfo(value, now=new Date()){
   return {days,label,level:days<=14?'green':days<=30?'yellow':'red',
     date:start.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'})};
 }
-export function ageBadge(value){
+export function ageBadge(value,showDate=false){
   const info=ageInfo(value);
   const text=info?info.label:'дата неизвестна';
   const title=info?'Создана: '+info.date+' · Возраст записи, не дедлайн':'Дата создания не сохранена для старой записи';
-  return '<span class="fv-age fv-age-'+(info?info.level:'unknown')+'" title="'+title+'">◷ '+text+'</span>';
+  return '<span class="fv-age fv-age-'+(info?info.level:'unknown')+'" title="'+title+'">◷ '+text+(showDate&&info?'<small class="fv-age-date">'+info.date+'</small>':'')+'</span>';
 }
