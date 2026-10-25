@@ -86,3 +86,17 @@ body[data-theme="light"] .fv-age-red{color:#a92e43;background:#ffe5e9}
 .actor-hidden-roles>.role-list{display:grid;gap:12px;margin-top:12px}
 .actor-role-visibility{white-space:nowrap;border:1px solid rgba(71,182,116,.5);color:var(--text);background:rgba(26,140,79,.12)}
 .actor-role-visibility:hover{border-color:rgba(80,210,132,.9)}
+
+/* Dedicated, recoverable history of accepted roles, independent of Studio roster. */
+.actor-history-intro{padding:15px 18px;margin-bottom:16px;border:1px solid var(--line);background:var(--panel2,#1a2c43);border-radius:13px}
+.actor-history-intro>div{display:flex;align-items:center;gap:10px;font-size:16px}
+.actor-history-intro svg{width:20px;height:20px}
+.actor-history-intro p{color:var(--muted);font-size:12px;margin:7px 0 0;line-height:1.6}
+.actor-history-stack{display:grid;gap:15px}
+.actor-history-project{background:var(--panel2,#1a2c43);border:1px solid var(--line);border-radius:13px;padding:15px}
+.actor-history-project h2{font-size:16px;margin:0 0 11px}
+.actor-history-episode{padding:10px 0}
+.actor-history-episode+.actor-history-episode{border-top:1px solid var(--line)}
+.actor-history-episode h3{font-size:12px;color:var(--muted);margin:0 0 8px}
+.actor-history-role-list{display:grid;gap:8px}
+.actor-history-role-list .actor-role-visibility{border:1px solid rgba(85,197,135,.55);color:var(--text);background:rgba(38,154,92,.12)}
