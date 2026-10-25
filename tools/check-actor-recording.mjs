@@ -14,4 +14,7 @@ assert.match(host,/route=="recording"/);
 assert.match(cloud,/\/v1\/actor\/recording/);
 assert.match(css,/\.actor-recording-check/);
 assert.doesNotMatch(app,/\['waiting','retake','recording','done'\]/);
+assert.equal(reviewedRole({roleId:'r',status:'recording'},[{roleId:'r',state:'retake'}]).status,'recording',
+  'Beginning a retake must display recording even if last review is retake');
+assert.equal(reviewedRole({roleId:'r',status:'retake'},[{roleId:'r',state:'retake'}]).status,'retake');
 console.log('PASS Actor recording controls: eligible roles and authenticated endpoint');
