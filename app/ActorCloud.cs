@@ -73,6 +73,18 @@ namespace FundiVoice {
                 return Status();
             }
         }
+        public object SetRoleVisibility(string roleId,bool hidden){
+            lock(syncGate){
+                if(!Authenticated())throw new CloudFault(401,"login_required","Сначала войди в аккаунт.");
+                Poll();
+                string server,access;
+                lock(gate){server=JsonData.S(session,"server");access=JsonData.S(session,"accessToken");}
+                if(String.IsNullOrEmpty(access))throw new CloudFault(401,"session_expired","Войди в аккаунт заново.");
+                CloudHttp.Request(server,"/v1/actor/roles/visibility","POST",new{roleId=roleId,hidden=hidden},access);
+                Poll();
+                return Status();
+            }
+        }
         public object Logout(){
             string server,refresh;
             lock(syncGate)lock(gate){

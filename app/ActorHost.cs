@@ -256,6 +256,7 @@ namespace FundiVoice {
             if(route=="logout"){Json(stream,200,cloud.Logout());return;}
             if(route=="sync"){Json(stream,200,cloud.SyncNow());return;}
             if(route=="recording"){Json(stream,200,cloud.SetRecording(JsonData.S(body,"roleId"),JsonData.B(body,"recording")));return;}
+            if(route=="roles/visibility"){Json(stream,200,cloud.SetRoleVisibility(JsonData.S(body,"roleId"),JsonData.B(body,"hidden")));return;}
             if(route=="vacation/start"){Json(stream,200,cloud.StartVacation(body));return;}
             if(route=="vacation/update"){Json(stream,200,cloud.UpdateVacation(body));return;}
             if(route=="vacation/end"){Json(stream,200,cloud.EndVacation());return;}
