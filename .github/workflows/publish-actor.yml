@@ -43,6 +43,8 @@ jobs:
           node ./tools/check-role-age.mjs
           node ./tools/check-actor-recording.mjs
           if($LASTEXITCODE -ne 0){throw 'Actor recording regression failed'}
+          node ./tools/check-actor-accepted-role-archive.mjs
+          if($LASTEXITCODE -ne 0){throw 'Actor accepted role archive regression failed'}
           node ./tools/check-actor-module-delivery.mjs
           if($LASTEXITCODE -ne 0){throw 'Actor module delivery regression failed'}
           node ./tools/check-update-restart.mjs
