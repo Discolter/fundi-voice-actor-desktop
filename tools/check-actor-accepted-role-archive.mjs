@@ -23,11 +23,11 @@ const host=readFileSync(new URL('../app/ActorHost.cs',import.meta.url),'utf8');
 const css=readFileSync(new URL('../app/web/actor.css',import.meta.url),'utf8');
 for(const term of ['visibleAcceptedRoles(all,state.view?.hiddenRoleIds)',
   'acceptedHiddenRoles(all,state.view?.hiddenRoleIds)',
-  'data-action="role-visibility"','data-action="toggle-hidden-roles"',
+  'data-action="role-visibility"','data-page="history"',
   'Вернуть в мои роли','Скрыть из кабинета','roles/visibility',
-  'showHiddenAccepted','roleRow(r,true,true)'])assert.ok(app.includes(term),'Missing desktop Actor archive: '+term);
+  'function renderHistory(hiddenRoles)','roleRow(r,true,true)'])assert.ok(app.includes(term),'Missing desktop Actor archive: '+term);
 assert.match(host,/route=="roles\/visibility"/);
 assert.match(cloud,/\/v1\/actor\/roles\/visibility/);
-assert.ok(css.includes('.actor-hidden-roles'));
-assert.match(app,/renderProjects\(active,acceptedHiddenRoles\(all,state\.view\?\.hiddenRoleIds\)\)/);
+assert.ok(css.includes('.actor-history-stack'));
+assert.ok(app.includes("ui.page==='history'?renderHistory(archived):renderDebts(active)"));
 console.log('PASS actor accepted role archive uses personal visibility only, restored on demand');
