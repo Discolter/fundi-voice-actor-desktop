@@ -34,6 +34,8 @@ export function groupProjects(roles,query=''){
 
 // Shared actor-facing labels for the Cloud inbox. Does not mutate account state.
 export const KIND_LABELS = Object.freeze({
+  role_archived:'Роль в истории',
+  role_restored:'Роль возвращена',
   role_assigned:'Новая роль',
   role_removed:'Роль снята',
   role_changed:'Изменения в роли',
