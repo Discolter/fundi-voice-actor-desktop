@@ -253,6 +253,7 @@ namespace FundiVoice {
             if(method=="GET"&&route=="update/check"){Json(stream,200,UpdateNotice.Check(Path.GetDirectoryName(webRoot),"fundi-voice-actor-desktop","actor-update.json","actor-app.zip","FundiVoiceActor.exe"));return;}
             if(method!="POST"){Json(stream,405,new{error="Неверный способ запроса."});return;}
             if(route=="login"||route=="activate"){Json(stream,200,cloud.Login(body,route=="activate"));return;}
+            if(route=="recovery/request"){Json(stream,200,cloud.RequestPasswordRecovery(body));return;}
             if(route=="logout"){Json(stream,200,cloud.Logout());return;}
             if(route=="sync"){Json(stream,200,cloud.SyncNow());return;}
             if(route=="recording"){Json(stream,200,cloud.SetRecording(JsonData.S(body,"roleId"),JsonData.B(body,"recording")));return;}

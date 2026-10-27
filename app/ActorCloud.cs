@@ -59,6 +59,15 @@ namespace FundiVoice {
             }
             return Status();
         }
+        public object RequestPasswordRecovery(Dictionary<string,object> data){
+            string server=CloudHttp.Server(JsonData.S(data,"server"));
+            string identifier=JsonData.S(data,"identifier").Trim();
+            if(identifier.Length<1||identifier.Length>128)
+                throw new CloudFault(400,"invalid_identifier","Укажи логин или ID актёра.");
+            // Public request: no authentication needed because the actor lost the password.
+            // Only the owner can approve; no old credentials are changed here.
+            return CloudHttp.Request(server,"/v1/actor/recovery/request","POST",new{identifier=identifier},null);
+        }
         public object SyncNow(){Poll();return Status();}
         public object SetRecording(string roleId,bool recording){
             lock(syncGate){
