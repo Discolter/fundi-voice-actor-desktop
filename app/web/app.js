@@ -11,7 +11,7 @@ paths.vacation='M12 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16ZM5 21h14M8 11h8';
 paths.history='M3 4h18v5H3zM5 9v11h14V9M9 13h6M10 3v3M14 3v3';
 const app=document.querySelector('#app'),modal=document.querySelector('#modal');
 let state={authenticated:false,server:'',username:'',view:null,error:'',lastSync:'',busy:false};
-let ui={page:'projects',query:'',filter:'all',roleSort:'default',activate:false,theme:'aurora',motion:true,expanded:new Set(),collapsed:new Set()},token='',formBusy=false,lastStatus='';
+let ui={page:'projects',query:'',filter:'all',roleSort:'default',activate:false,recover:false,theme:'aurora',motion:true,expanded:new Set(),collapsed:new Set()},token='',formBusy=false,lastStatus='';
 try{const saved=JSON.parse(localStorage.getItem('fundi-actor-appearance')||'{}');if(THEMES.some(t=>t[0]===saved.theme))ui.theme=saved.theme;if(saved.motion===false)ui.motion=false;if(ACTOR_ROLE_SORTS.some(([id])=>id===saved.roleSort))ui.roleSort=saved.roleSort;}catch{}
 let notificationLimit=50,recordingRoleFilter='',hiddenTransferId='';
 function renderTransferNotice(){document.querySelector('#file-transfer-slot').innerHTML=transferPanel(state.transfer,'actor-',hiddenTransferId);}
@@ -61,9 +61,23 @@ function render(){
   app.innerHTML=`<div class="actor-shell"><aside class="actor-sidebar"><div class="actor-brand"><img src="brand-mark.png" alt=""><span>Fundi Voice<small>Actor</small></span></div><nav><button class="nav-item ${ui.page==='projects'?'active':''}" data-page="projects">${icon('projects')}<span>Проекты</span><b>${projects.length}</b></button><button class="nav-item ${ui.page==='debts'?'active':''}" data-page="debts">${icon('debts')}<span>Мои долги</span><b>${debts.length}</b></button><button class="nav-item ${ui.page==='history'?'active':''}" data-page="history">${icon('history')}<span>История</span><b>${archived.length}</b></button><button class="nav-item ${ui.page==='files'?'active':''}" data-action="recordings" aria-current="${ui.page==='files'?'page':'false'}">${icon('files')}<span>Мои файлы</span></button></nav><div class="actor-profile"><div class="profile-initial">${e(state.username.slice(0,1).toUpperCase())}</div><div><strong>${e(state.username)}</strong><small>Актёр студии</small></div><button class="icon-btn" data-action="settings" aria-label="Настройки" title="Настройки">${icon('settings')}</button></div><button class="nav-item vacation-sidebar ${ui.page==='vacation'?'active':''}" data-page="vacation">${icon('vacation')}<span>Отпуск</span>${state.vacation?.current?.status==='active'?'<b>В отпуске</b>':''}</button></aside><main class="actor-main"><header class="actor-top"><div><span class="eyebrow">ЛИЧНОЕ ПРОСТРАНСТВО</span><h1>${ui.page==='vacation'?'Отпуск':ui.page==='files'?'Мои файлы':ui.page==='projects'?'Твои проекты':ui.page==='history'?'История ролей':'Мои долги'}</h1></div><div class="actor-tools"><button class="icon-btn notification-bell" data-action="messages" aria-label="Уведомления" title="Уведомления">${icon('bell')}<b data-message-count ${unread()||state.mailbox?.failed?.length?'':'hidden'}>${unread()||(state.mailbox?.failed?.length?'!':'')}</b></button><label class="actor-search">${icon('search')}<input id="search" placeholder="Найти роль или проект" value="${e(ui.query)}"></label><button class="btn ghost icon-text" data-action="sync" ${state.busy?'disabled':''}>${icon('sync')}${state.busy?'Обновляем…':'Обновить'}</button></div></header><div class="sync-line"><span class="sync-dot ${state.error?'offline':''}"></span><span>${state.error?'Нет свежего обновления':'Обновлено'} · ${e(stamp(state.lastSync))}</span></div>${state.error?`<div class="offline-note">${e(state.error)} Сохранённые назначения доступны для просмотра.</div>`:''}<div class="actor-content">${ui.page==='vacation'?vacationView():ui.page==='files'?actorFilesContent(''):ui.page==='projects'?renderProjects(active):ui.page==='history'?renderHistory(archived):renderDebts(active)}</div><footer>Назначения обновляются раз в минуту, пока приложение работает. Закрытие окна оставляет приложение в трее.</footer></main></div>`;
   if(focused){const input=document.querySelector('#search');input.focus();input.setSelectionRange(caret,caret);}
 }
+function renderRecovery(){
+ const server=state.server||'https://fundi-voice-cloud.onrender.com';
+ app.innerHTML=`<main class="auth-shell"><section class="auth-card"><div class="auth-brand"><img src="brand-mark.png" alt=""><div><strong>Fundi Voice</strong><span>Actor</span></div></div>
+ <h1>Восстановление доступа</h1>
+ <p class="auth-sub">Отправь запрос руководителю студии. После проверки он выдаст новый код приглашения. Все твои роли сохранятся.</p>
+ <form id="recovery-form">
+ <label>Сервер<input name="server" type="url" value="${e(server)}" required></label>
+ <label>Прежний логин или ID актёра<input name="identifier" maxlength="128" required autocomplete="username" placeholder="Логин или ID"></label>
+ <p class="form-error" id="recovery-error" role="alert"></p>
+ <button class="btn primary auth-submit" type="submit">Отправить запрос</button>
+ </form><div class="auth-footer"><button class="btn ghost" data-action="back-login" type="button">Назад ко входу</button></div>
+ </section></main>`;
+}
 function renderLogin(){
+  if(ui.recover){renderRecovery();return;}
   const server=state.server||'https://fundi-voice-cloud.onrender.com';
-  app.innerHTML=`<main class="auth-shell"><section class="auth-card"><div class="auth-brand"><img src="brand-mark.png" alt=""><div><strong>Fundi Voice</strong><span>Actor</span></div></div><h1>${ui.activate?'Добро пожаловать в состав':'С возвращением'}</h1><p class="auth-sub">${ui.activate?'Вставь приглашение и создай свой аккаунт.':'Твои проекты, роли и сроки — в одном месте.'}</p><div class="auth-tabs"><button data-auth="login" class="${!ui.activate?'active':''}">Вход</button><button data-auth="activate" class="${ui.activate?'active':''}">По приглашению</button></div><form id="auth-form"><label>Сервер<input name="server" type="url" value="${e(server)}" required autocomplete="url"></label>${ui.activate?'<label>Приглашение<textarea name="code" rows="2" required placeholder="Код или всё сообщение от руководителя"></textarea></label>':''}<label>Логин<input name="username" required minlength="3" maxlength="32" pattern="[A-Za-z0-9][A-Za-z0-9_.-]{2,31}" autocomplete="username" placeholder="Твой ник латиницей"></label><label>Пароль<input name="password" type="password" required minlength="10" maxlength="128" autocomplete="${ui.activate?'new-password':'current-password'}" placeholder="От 10 символов"></label>${ui.activate?'<label>Повтори пароль<input name="confirm" type="password" required minlength="10" maxlength="128" autocomplete="new-password"></label>':''}<p class="form-error" id="auth-error" role="alert">${e(state.error)}</p><button class="btn primary auth-submit" type="submit" ${formBusy?'disabled':''}>${formBusy?'Подключаемся…':ui.activate?'Создать аккаунт':'Войти'}</button></form><div class="auth-footer"><span>Приглашение выдаёт руководитель студии.</span><button class="icon-btn" data-action="settings" title="Тема" aria-label="Тема">${icon('settings')}</button></div></section></main>`;
+  app.innerHTML=`<main class="auth-shell"><section class="auth-card"><div class="auth-brand"><img src="brand-mark.png" alt=""><div><strong>Fundi Voice</strong><span>Actor</span></div></div><h1>${ui.activate?'Добро пожаловать в состав':'С возвращением'}</h1><p class="auth-sub">${ui.activate?'Вставь приглашение и создай свой аккаунт.':'Твои проекты, роли и сроки — в одном месте.'}</p><div class="auth-tabs"><button data-auth="login" class="${!ui.activate?'active':''}">Вход</button><button data-auth="activate" class="${ui.activate?'active':''}">По приглашению</button></div><form id="auth-form"><label>Сервер<input name="server" type="url" value="${e(server)}" required autocomplete="url"></label>${ui.activate?'<label>Приглашение<textarea name="code" rows="2" required placeholder="Код или всё сообщение от руководителя"></textarea></label>':''}<label>Логин<input name="username" required minlength="3" maxlength="32" pattern="[A-Za-z0-9][A-Za-z0-9_.-]{2,31}" autocomplete="username" placeholder="Твой ник латиницей"></label><label>Пароль<input name="password" type="password" required minlength="10" maxlength="128" autocomplete="${ui.activate?'new-password':'current-password'}" placeholder="От 10 символов"></label>${ui.activate?'<label>Повтори пароль<input name="confirm" type="password" required minlength="10" maxlength="128" autocomplete="new-password"></label>':''}<p class="form-error" id="auth-error" role="alert">${e(state.error)}</p><button class="btn primary auth-submit" type="submit" ${formBusy?'disabled':''}>${formBusy?'Подключаемся…':ui.activate?'Создать аккаунт':'Войти'}</button></form><div class="auth-footer"><button type="button" class="btn ghost" data-action="recover">Забыли пароль?</button><span>Приглашение выдаёт руководитель студии.</span><button class="icon-btn" data-action="settings" title="Тема" aria-label="Тема">${icon('settings')}</button></div></section></main>`;
 }
 function empty(title,text){return `<div class="actor-empty"><div>${icon('projects')}</div><h2>${e(title)}</h2><p>${e(text)}</p></div>`;}
 const telegramSourceLink=url=>typeof url==='string'&&/^https:\/\/(?:t\.me|telegram\.me)\/[A-Za-z0-9_+/-]+\/?$/.test(url);
@@ -176,6 +190,8 @@ document.addEventListener('click',async event=>{
   try{
     if(button.dataset.page){ui.page=button.dataset.page;ui.query='';render();}
     if(button.dataset.auth){ui.activate=button.dataset.auth==='activate';render();}
+    if(button.dataset.action==='recover'){ui.recover=true;render();return;}
+    if(button.dataset.action==='back-login'){ui.recover=false;render();return;}
     if(button.dataset.filter){ui.filter=button.dataset.filter;render();}
     if(button.dataset.theme){ui.theme=button.dataset.theme;appearance();saveAppearance();modal.querySelectorAll('[data-theme]').forEach(b=>b.classList.toggle('selected',b.dataset.theme===ui.theme));}
     const action=button.dataset.action;
@@ -248,6 +264,17 @@ document.addEventListener('toggle',event=>{
 },true);
 document.addEventListener('change',event=>{if(event.target.id==='motion'){ui.motion=event.target.checked;appearance();saveAppearance();}if(event.target.id==='actor-role-sort'){ui.roleSort=ACTOR_ROLE_SORTS.some(([id])=>id===event.target.value)?event.target.value:'default';saveAppearance();render();}});
 document.addEventListener('submit',async event=>{
+  if(event.target.id==='recovery-form'){
+    event.preventDefault();const form=event.target,button=form.querySelector('[type=submit]');
+    const data=Object.fromEntries(new FormData(form));
+    button.disabled=true;
+    try {
+      const receipt=await api('recovery/request',data);
+      ui.recover=false;render();toast(receipt.message||'Запрос отправлен руководителю студии.');
+    } catch(error){const target=document.querySelector('#recovery-error');if(target)target.textContent=error.message;}
+    finally{if(button.isConnected)button.disabled=false;}
+    return;
+  }
   if(event.target.id==='vacation-create-form'||event.target.id==='vacation-update-form'){
     event.preventDefault();const form=event.target,button=form.querySelector('[type=submit]');
     const values=new FormData(form),reason=String(values.get('reason')||''),endDate=String(values.get('endDate')||'')||null;
