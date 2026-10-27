@@ -68,7 +68,7 @@ function renderRecovery(){
  <p class="auth-sub">Отправь запрос руководителю студии. После проверки он выдаст новый код приглашения. Все твои роли сохранятся.</p>
  <form id="recovery-form">
  <label>Сервер<input name="server" type="url" value="${e(server)}" required></label>
- <label>Прежний логин или ID актёра<input name="identifier" maxlength="128" required autocomplete="username" placeholder="Логин или ID"></label>
+ <label>Логин, Telegram или имя актёра<input name="identifier" maxlength="128" required autocomplete="username" placeholder="Логин, @Telegram или имя"></label>
  <p class="form-error" id="recovery-error" role="alert"></p>
  <button class="btn primary auth-submit" type="submit">Отправить запрос</button>
  </form><div class="auth-footer"><button class="btn ghost" data-action="back-login" type="button">Назад ко входу</button></div>
