@@ -38,19 +38,21 @@ function vacationView(){
     form=`<section class="vacation-panel"><div class="vacation-icon">${icon('vacation')}</div><h2>Нужен отпуск?</h2><p class="muted">Выбери даты, чтобы руководитель знал, когда тебя не стоит назначать на новые роли. Одобрение не требуется, уже назначенные роли сохранятся.</p>
       <form id="vacation-create-form" class="vacation-form">
       <label>Первый день отпуска<input type="date" name="startDate" value="${today()}" min="${today()}" required></label>
-      <label>Последний день (необязательно)<input type="date" name="endDate" min="${today()}"></label>
+      <label>Последний день<input type="date" name="endDate" min="${today()}" required></label>
+      <label class="vacation-indefinite-label"><input type="checkbox" name="indefinite" data-vacation-indefinite> Бессрочно — пока я сам или руководитель не завершит отпуск</label>
       <label>Причина (необязательно, видна только руководителю)<textarea name="reason" maxlength="800" rows="3" placeholder="Можно не заполнять"></textarea></label>
       <button type="submit" class="btn primary">Уйти в отпуск</button></form></section>`;
   }else{
     form=`<section class="vacation-panel"><div class="vacation-icon">${icon('vacation')}</div><h2>${e(statuses[v.status]||v.status)}</h2>
-      <p class="muted">С ${e(vacationDay(v.startDate))} по ${e(vacationDay(v.endDate))}. ${v.status==='active'?'Ты сейчас недоступен для новых назначений.':'Отпуск начнётся автоматически в указанную дату.'}</p>
+      <p class="muted">С ${e(vacationDay(v.startDate))} ${v.endDate?`по ${e(vacationDay(v.endDate))}`:"· Бессрочно (до ручного завершения)"}. ${v.status==='active'?'Ты сейчас недоступен для новых назначений.':'Отпуск начнётся автоматически в указанную дату.'}</p>
       <form id="vacation-update-form" class="vacation-form">
-      <label>Изменить дату возвращения<input type="date" name="endDate" value="${e(v.endDate||'')}" min="${e(v.startDate)}"></label>
+      <label>Изменить дату возвращения<input type="date" name="endDate" value="${e(v.endDate||'')}" min="${e(v.startDate)}" ${v.endDate?"required":"disabled"}></label>
+      <label class="vacation-indefinite-label"><input type="checkbox" name="indefinite" data-vacation-indefinite ${v.endDate?"":"checked"}> Бессрочно — пока я сам или руководитель не завершит отпуск</label>
       <label>Причина (необязательно)<textarea name="reason" maxlength="800" rows="3">${e(v.reason||'')}</textarea></label>
       <button type="submit" class="btn primary">Сохранить изменения</button></form>
       <button type="button" class="btn ghost vacation-end" data-action="vacation-end">${v.status==='planned'?'Отменить отпуск':'Вернуться к работе'}</button></section>`;
   }
-  const historyHTML=history.slice(0,30).map(item=>`<div class="vacation-history-item"><strong>${e(statuses[item.status]||item.status)}</strong><small>${e(vacationDay(item.startDate))} — ${e(vacationDay(item.endDate))}</small>${item.reason?`<p>${e(item.reason)}</p>`:''}</div>`).join('');
+  const historyHTML=history.slice(0,30).map(item=>`<div class="vacation-history-item"><strong>${e(statuses[item.status]||item.status)}</strong><small>${e(vacationDay(item.startDate))} — ${item.endDate?e(vacationDay(item.endDate)):"Бессрочно"}</small>${item.reason?`<p>${e(item.reason)}</p>`:''}</div>`).join('');
   return form+`<section class="vacation-panel vacation-history"><h2>История отпусков</h2>${historyHTML||'<p class="muted">Истории отпусков пока нет.</p>'}</section>`;
 }
 function render(){
@@ -110,6 +112,11 @@ function renderHistory(hiddenRoles){
       </div>`).join('')}
     </section>`).join('')}</div>`;
 }
+function roleImageThumb(role) {
+  const src=role?.image;
+  if(typeof src!=='string'||src.length>150000||!/^data:image\/(?:png|webp|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/i.test(src))return '';
+  return `<button type="button" class="role-character-image" data-role-image-open aria-label="Увеличить персонажа ${e(role.character)}"><img src="${e(src)}" alt="${e(role.character)}"></button>`;
+}
 function roleRow(role,showProject=true,hidden=false){
   const late=role.due&&role.due<today()&&isDebt(role);
   const review=role.review,waiting=role.queued||review?.state==='pending',accepted=role.status==='done';
@@ -117,7 +124,7 @@ function roleRow(role,showProject=true,hidden=false){
   const submitLabel=role.queued?'Отправляем…':accepted?'Принято':waiting?'Отправить повторно':role.status==='retake'?'Сдать исправленное':'Сдать на проверку';
   const feedback=review?.messageText&&(review.messageKind==='note'||review.messageKind===review.state)?review.messageText:'';
   const enabled=state.view?.reviewApiAvailable===true;
-  return `<div class="actor-role-wrap"><div class="actor-role" data-status="${e(role.status)}"><div class="role-name"><strong>${e(role.character)}</strong>${Number.isInteger(role.lineCount)&&role.lineCount>=0?`<small class="actor-role-lines ${actorWorkloadClass(role.lineCount)}" title="${role.lineCount<=50?'Мало реплик (0–50)':role.lineCount<=100?'Средний объём (51–100)':'Много реплик (101+)'}">Реплик: ${role.lineCount}</small>`:''}${showProject?`<small>${e(role.projectTitle)} · ${role.season?'С'+e(role.season)+' · ':''}${role.episodeNumber?'Серия '+e(role.episodeNumber):e(role.episodeTitle||'Серия')}</small>`:''}</div><span class="role-stage stage-${e(role.status)}">${e(role.reviewLabel)}</span>${['waiting','retake','recording'].includes(role.status)?`<label class="actor-recording-check" title="Отметить начало записи"><input type="checkbox" class="recording-toggle" data-role="${e(role.roleId)}" ${role.status==='recording'?'checked':''}> В записи</label>`:''}${ageBadge(role.createdAt)}<span class="role-due ${late?'overdue':''}">${late?'Просрочено · ':''}${e(dueLabel(role.due))}</span>${accepted?`<button class="btn ghost actor-role-visibility" data-action="role-visibility" data-role="${e(role.roleId)}" data-hidden="${hidden?'false':'true'}">${hidden?'Вернуть в мои роли':'Скрыть из кабинета'}</button>`:''}<button class="btn ${waiting||accepted?'ghost':'primary'} submit-role" data-action="submit-role" data-role="${e(role.roleId)}" ${!canSubmit(enabled)?'disabled':''} title="${!enabled?'Руководителю нужно обновить сервер до Cloud 0.3.1':role.queued?'Дождись завершения предыдущей отправки':accepted?'Роль принята':'Загрузить запись и сдать на проверку'}">${submitLabel}</button></div>${feedback?`<div class="role-feedback" data-kind="${e(review.messageKind)}"><strong>${e(messageKind(review.messageKind))}</strong><p>${e(feedback)}</p></div>`:''}</div>`;
+  return `<div class="actor-role-wrap"><div class="actor-role" data-status="${e(role.status)}"><div class="role-name">${roleImageThumb(role)}<strong>${e(role.character)}</strong>${Number.isInteger(role.lineCount)&&role.lineCount>=0?`<small class="actor-role-lines ${actorWorkloadClass(role.lineCount)}" title="${role.lineCount<=50?'Мало реплик (0–50)':role.lineCount<=100?'Средний объём (51–100)':'Много реплик (101+)'}">Реплик: ${role.lineCount}</small>`:''}${showProject?`<small>${e(role.projectTitle)} · ${role.season?'С'+e(role.season)+' · ':''}${role.episodeNumber?'Серия '+e(role.episodeNumber):e(role.episodeTitle||'Серия')}</small>`:''}</div><span class="role-stage stage-${e(role.status)}">${e(role.reviewLabel)}</span>${['waiting','retake','recording'].includes(role.status)?`<label class="actor-recording-check" title="Отметить начало записи"><input type="checkbox" class="recording-toggle" data-role="${e(role.roleId)}" ${role.status==='recording'?'checked':''}> В записи</label>`:''}${ageBadge(role.createdAt)}<span class="role-due ${late?'overdue':''}">${late?'Просрочено · ':''}${e(dueLabel(role.due))}</span>${accepted?`<button class="btn ghost actor-role-visibility" data-action="role-visibility" data-role="${e(role.roleId)}" data-hidden="${hidden?'false':'true'}">${hidden?'Вернуть в мои роли':'Скрыть из кабинета'}</button>`:''}<button class="btn ${waiting||accepted?'ghost':'primary'} submit-role" data-action="submit-role" data-role="${e(role.roleId)}" ${!canSubmit(enabled)?'disabled':''} title="${!enabled?'Руководителю нужно обновить сервер до Cloud 0.3.1':role.queued?'Дождись завершения предыдущей отправки':accepted?'Роль принята':'Загрузить запись и сдать на проверку'}">${submitLabel}</button></div>${feedback?`<div class="role-feedback" data-kind="${e(review.messageKind)}"><strong>${e(messageKind(review.messageKind))}</strong><p>${e(feedback)}</p></div>`:''}</div>`;
 }
 document.addEventListener('change',async event=>{
   const input=event.target.closest?.('.recording-toggle');
@@ -263,6 +270,11 @@ document.addEventListener('toggle',event=>{
   const id=element.dataset.project;if(element.open){ui.expanded.add(id);ui.collapsed.delete(id);}else{ui.collapsed.add(id);ui.expanded.delete(id);}
 },true);
 document.addEventListener('change',event=>{if(event.target.id==='motion'){ui.motion=event.target.checked;appearance();saveAppearance();}if(event.target.id==='actor-role-sort'){ui.roleSort=ACTOR_ROLE_SORTS.some(([id])=>id===event.target.value)?event.target.value:'default';saveAppearance();render();}});
+document.addEventListener('change',event=>{
+  const checkbox=event.target.closest?.('input[data-vacation-indefinite]');if(!checkbox)return;
+  const input=checkbox.closest('form')?.querySelector('input[name=endDate]');if(!input)return;
+  input.disabled=checkbox.checked;input.required=!checkbox.checked;
+});
 document.addEventListener('submit',async event=>{
   if(event.target.id==='recovery-form'){
     event.preventDefault();const form=event.target,button=form.querySelector('[type=submit]');
@@ -277,7 +289,8 @@ document.addEventListener('submit',async event=>{
   }
   if(event.target.id==='vacation-create-form'||event.target.id==='vacation-update-form'){
     event.preventDefault();const form=event.target,button=form.querySelector('[type=submit]');
-    const values=new FormData(form),reason=String(values.get('reason')||''),endDate=String(values.get('endDate')||'')||null;
+    const values=new FormData(form),reason=String(values.get('reason')||''),indefinite=values.has('indefinite'),endDate=indefinite?null:(String(values.get('endDate')||'')||null);
+    if(!indefinite&&!endDate){toast('Укажи дату возвращения или отметь «Бессрочно».',true);return;}
     button.disabled=true;
     try{
       if(form.id==='vacation-create-form'){

@@ -1,0 +1,13 @@
+/* Character reference portraits with a soft frosted-glass fullscreen lightbox. */
+.role-character-image{display:inline-flex;vertical-align:middle;align-items:center;justify-content:center;margin:2px 10px 2px 0;padding:0;width:48px;height:62px;border:1px solid rgba(185,209,239,.28);border-radius:12px;overflow:hidden;background:rgba(70,98,140,.12);cursor:zoom-in;box-shadow:0 4px 14px rgba(0,0,0,.12);transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.role-character-image img{display:block;width:100%;height:100%;object-fit:cover}
+.role-character-image:hover{transform:translateY(-2px) scale(1.04);border-color:rgba(116,204,245,.75);box-shadow:0 7px 20px rgba(0,0,0,.19)}
+.role-character-image:focus-visible,.fv-role-image-close:focus-visible{outline:3px solid #81caff;outline-offset:3px}
+.fv-role-image-lightbox{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:clamp(16px,4vw,50px);box-sizing:border-box;background:rgba(7,12,25,.1);backdrop-filter:blur(0px);-webkit-backdrop-filter:blur(0px);opacity:0;transition:opacity .24s ease,background .24s ease,backdrop-filter .24s ease;-webkit-transition:opacity .24s ease,background .24s ease,-webkit-backdrop-filter .24s ease}
+.fv-role-image-lightbox.is-visible{opacity:1;background:rgba(7,12,25,.74);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.fv-role-image-frame{display:flex;justify-content:center;align-items:center;max-width:100%;max-height:100%;padding:8px;border:1px solid rgba(255,255,255,.18);border-radius:24px;background:rgba(15,25,42,.56);box-shadow:0 28px 90px rgba(0,0,0,.42);transform:translateY(22px) scale(.94);transition:transform .28s cubic-bezier(.2,.8,.2,1);overflow:hidden}
+.fv-role-image-lightbox.is-visible .fv-role-image-frame{transform:translateY(0) scale(1)}
+.fv-role-image-frame img{display:block;max-width:min(92vw,1400px);max-height:calc(100dvh - 104px);width:auto;height:auto;object-fit:contain;border-radius:17px}
+.fv-role-image-close{position:absolute;top:max(18px,env(safe-area-inset-top));right:max(18px,env(safe-area-inset-right));width:44px;height:44px;border:1px solid rgba(255,255,255,.28);border-radius:15px;background:rgba(40,55,80,.7);color:#fff;font:32px/1 sans-serif;cursor:pointer;z-index:1}
+.fv-role-image-close:hover{background:rgba(85,108,150,.9)}
+@media(prefers-reduced-motion:reduce){.role-character-image,.fv-role-image-lightbox,.fv-role-image-frame{transition:none!important}}
