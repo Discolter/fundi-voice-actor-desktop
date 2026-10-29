@@ -16,7 +16,7 @@ namespace FundiVoice.Desktop {
         public CloudFault(int status,string code,string message):base(message){Status=status;Code=code;}
     }
     public static class JsonData {
-        public static JavaScriptSerializer Json(){return new JavaScriptSerializer{MaxJsonLength=8*1024*1024,RecursionLimit=100};}
+        public static JavaScriptSerializer Json(){return new JavaScriptSerializer{MaxJsonLength=16*1024*1024,RecursionLimit=100};}
         public static Dictionary<string,object> D(object value){return value as Dictionary<string,object> ?? new Dictionary<string,object>();}
         public static string S(Dictionary<string,object> value,string key){object found;return value.TryGetValue(key,out found)&&found!=null?Convert.ToString(found,CultureInfo.InvariantCulture):"";}
         public static bool B(Dictionary<string,object> value,string key){object found;return value.TryGetValue(key,out found)&&found is bool&&(bool)found;}
@@ -78,7 +78,7 @@ namespace FundiVoice.Desktop {
                 using(var input=response.GetResponseStream())
                 using(var memory=new MemoryStream()){
                     var buffer=new byte[16384];int count;
-                    while((count=input.Read(buffer,0,buffer.Length))>0){if(memory.Length+count>4*1024*1024)throw new CloudFault(502,"invalid_response","Ответ сервера слишком большой.");memory.Write(buffer,0,count);}
+                    while((count=input.Read(buffer,0,buffer.Length))>0){if(memory.Length+count>10*1024*1024)throw new CloudFault(502,"invalid_response","Ответ сервера слишком большой.");memory.Write(buffer,0,count);}
                     raw=Encoding.UTF8.GetString(memory.ToArray());
                 }
                 Dictionary<string,object> result;
