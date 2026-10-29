@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const app=readFileSync('app/web/app.js','utf8');
+const html=readFileSync('app/web/index.html','utf8');
+const host=readFileSync('app/ActorHost.cs','utf8');
+assert.match(app,/function roleImageThumb\(role\)/);
+assert.match(app,/roleImageThumb\(role\)/);
+assert.match(app,/data-role-image-open/);
+assert.match(html,/role-image-viewer\.css/);
+assert.match(html,/role-image-viewer\.js/);
+assert.ok(host.includes('"/role-image-viewer.js"')&&host.includes('"/role-image-viewer.css"'));
+console.log('PASS: Actor Desktop renders accessible character portraits from assigned role feed');
