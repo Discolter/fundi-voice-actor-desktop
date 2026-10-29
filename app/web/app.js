@@ -38,19 +38,21 @@ function vacationView(){
     form=`<section class="vacation-panel"><div class="vacation-icon">${icon('vacation')}</div><h2>Нужен отпуск?</h2><p class="muted">Выбери даты, чтобы руководитель знал, когда тебя не стоит назначать на новые роли. Одобрение не требуется, уже назначенные роли сохранятся.</p>
       <form id="vacation-create-form" class="vacation-form">
       <label>Первый день отпуска<input type="date" name="startDate" value="${today()}" min="${today()}" required></label>
-      <label>Последний день (необязательно)<input type="date" name="endDate" min="${today()}"></label>
+      <label>Последний день<input type="date" name="endDate" min="${today()}" required></label>
+      <label class="vacation-indefinite-label"><input type="checkbox" name="indefinite" data-vacation-indefinite> Бессрочно — пока я сам или руководитель не завершит отпуск</label>
       <label>Причина (необязательно, видна только руководителю)<textarea name="reason" maxlength="800" rows="3" placeholder="Можно не заполнять"></textarea></label>
       <button type="submit" class="btn primary">Уйти в отпуск</button></form></section>`;
   }else{
     form=`<section class="vacation-panel"><div class="vacation-icon">${icon('vacation')}</div><h2>${e(statuses[v.status]||v.status)}</h2>
-      <p class="muted">С ${e(vacationDay(v.startDate))} по ${e(vacationDay(v.endDate))}. ${v.status==='active'?'Ты сейчас недоступен для новых назначений.':'Отпуск начнётся автоматически в указанную дату.'}</p>
+      <p class="muted">С ${e(vacationDay(v.startDate))} ${v.endDate?`по ${e(vacationDay(v.endDate))}`:"· Бессрочно (до ручного завершения)"}. ${v.status==='active'?'Ты сейчас недоступен для новых назначений.':'Отпуск начнётся автоматически в указанную дату.'}</p>
       <form id="vacation-update-form" class="vacation-form">
-      <label>Изменить дату возвращения<input type="date" name="endDate" value="${e(v.endDate||'')}" min="${e(v.startDate)}"></label>
+      <label>Изменить дату возвращения<input type="date" name="endDate" value="${e(v.endDate||'')}" min="${e(v.startDate)}" ${v.endDate?"required":"disabled"}></label>
+      <label class="vacation-indefinite-label"><input type="checkbox" name="indefinite" data-vacation-indefinite ${v.endDate?"":"checked"}> Бессрочно — пока я сам или руководитель не завершит отпуск</label>
       <label>Причина (необязательно)<textarea name="reason" maxlength="800" rows="3">${e(v.reason||'')}</textarea></label>
       <button type="submit" class="btn primary">Сохранить изменения</button></form>
       <button type="button" class="btn ghost vacation-end" data-action="vacation-end">${v.status==='planned'?'Отменить отпуск':'Вернуться к работе'}</button></section>`;
   }
-  const historyHTML=history.slice(0,30).map(item=>`<div class="vacation-history-item"><strong>${e(statuses[item.status]||item.status)}</strong><small>${e(vacationDay(item.startDate))} — ${e(vacationDay(item.endDate))}</small>${item.reason?`<p>${e(item.reason)}</p>`:''}</div>`).join('');
+  const historyHTML=history.slice(0,30).map(item=>`<div class="vacation-history-item"><strong>${e(statuses[item.status]||item.status)}</strong><small>${e(vacationDay(item.startDate))} — ${item.endDate?e(vacationDay(item.endDate)):"Бессрочно"}</small>${item.reason?`<p>${e(item.reason)}</p>`:''}</div>`).join('');
   return form+`<section class="vacation-panel vacation-history"><h2>История отпусков</h2>${historyHTML||'<p class="muted">Истории отпусков пока нет.</p>'}</section>`;
 }
 function render(){
@@ -268,6 +270,11 @@ document.addEventListener('toggle',event=>{
   const id=element.dataset.project;if(element.open){ui.expanded.add(id);ui.collapsed.delete(id);}else{ui.collapsed.add(id);ui.expanded.delete(id);}
 },true);
 document.addEventListener('change',event=>{if(event.target.id==='motion'){ui.motion=event.target.checked;appearance();saveAppearance();}if(event.target.id==='actor-role-sort'){ui.roleSort=ACTOR_ROLE_SORTS.some(([id])=>id===event.target.value)?event.target.value:'default';saveAppearance();render();}});
+document.addEventListener('change',event=>{
+  const checkbox=event.target.closest?.('input[data-vacation-indefinite]');if(!checkbox)return;
+  const input=checkbox.closest('form')?.querySelector('input[name=endDate]');if(!input)return;
+  input.disabled=checkbox.checked;input.required=!checkbox.checked;
+});
 document.addEventListener('submit',async event=>{
   if(event.target.id==='recovery-form'){
     event.preventDefault();const form=event.target,button=form.querySelector('[type=submit]');
@@ -282,7 +289,8 @@ document.addEventListener('submit',async event=>{
   }
   if(event.target.id==='vacation-create-form'||event.target.id==='vacation-update-form'){
     event.preventDefault();const form=event.target,button=form.querySelector('[type=submit]');
-    const values=new FormData(form),reason=String(values.get('reason')||''),endDate=String(values.get('endDate')||'')||null;
+    const values=new FormData(form),reason=String(values.get('reason')||''),indefinite=values.has('indefinite'),endDate=indefinite?null:(String(values.get('endDate')||'')||null);
+    if(!indefinite&&!endDate){toast('Укажи дату возвращения или отметь «Бессрочно».',true);return;}
     button.disabled=true;
     try{
       if(form.id==='vacation-create-form'){
