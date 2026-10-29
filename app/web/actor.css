@@ -100,3 +100,8 @@ body[data-theme="light"] .fv-age-red{color:#a92e43;background:#ffe5e9}
 .actor-history-episode h3{font-size:12px;color:var(--muted);margin:0 0 8px}
 .actor-history-role-list{display:grid;gap:8px}
 .actor-history-role-list .actor-role-visibility{border:1px solid rgba(85,197,135,.55);color:var(--text);background:rgba(38,154,92,.12)}
+
+/* Self-service indefinite actor vacation toggle. */
+.vacation-form .vacation-indefinite-label{display:flex;flex-direction:row;align-items:center;gap:11px;cursor:pointer;font-size:13px;font-weight:700;line-height:1.4;color:var(--text)}
+.vacation-form .vacation-indefinite-label input[type=checkbox]{width:20px;height:20px;min-width:20px;margin:0;padding:0;accent-color:var(--brand1,#80baff);cursor:pointer}
+.vacation-form input[type=date]:disabled{opacity:.45;cursor:not-allowed}
