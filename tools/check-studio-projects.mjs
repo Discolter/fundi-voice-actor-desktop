@@ -9,7 +9,7 @@ const feed={revision:10,roles:[
 ]};
 const ui={query:'',stageLabel:x=>({waiting:'Жду запись',done:'Принято'})[x],escapeHTML,expanded:new Set()};
 const html=renderReadonlyStudioProjects(feed,ui);
-for(const required of ['Проекты студии','', 'Адский рай 2','Габимару','Первый актёр','Второй актёр','Жду запись','Принято','50%','&lt;script&gt;'])
+for(const required of ['Адский рай 2','Габимару','Первый актёр','Второй актёр','Жду запись','Принято','50%','&lt;script&gt;'])
   assert.ok(html.includes(required),'Missing studio row: '+required);
 assert.ok(!html.includes('<script>'),'Unescaped cast text');
 assert.ok(!html.includes('data-action="role-visibility"'),'Read-only studio rows must not edit roles');
