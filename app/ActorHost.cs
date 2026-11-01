@@ -22,7 +22,7 @@ namespace FundiVoice {
         static readonly ManualResetEvent serverReady=new ManualResetEvent(false);
         static readonly string instanceId=Guid.NewGuid().ToString("N");
         static readonly HashSet<string> files=new HashSet<string>(StringComparer.Ordinal){
-            "/","/index.html","/app.js","/core.js","/age.js", "/file-tools.js", "/file-tools.css","/actor.css","/themes.css","/animated-themes.css","/file-browser.js","/file-browser.css","/update-notice.js","/update-notice.css","/role-image-viewer.js","/role-image-viewer.css","/startup-check.js","/brand-mark.png","/favicon.ico","/icon.svg"
+            "/","/index.html","/app.js","/core.js","/age.js", "/file-tools.js", "/file-tools.css","/actor.css","/themes.css","/animated-themes.css","/file-browser.js","/file-browser.css","/update-notice.js","/update-notice.css","/role-image-viewer.js","/role-image-viewer.css","/studio-projects.css","/studio-projects.js","/startup-check.js","/brand-mark.png","/favicon.ico","/icon.svg"
         };
         public static void Run(string directory){
             webRoot=Path.Combine(Path.GetFullPath(directory),"web");
@@ -250,6 +250,7 @@ namespace FundiVoice {
 
         static void Route(NetworkStream stream,string method,string route,Dictionary<string,object> body){
             if(method=="GET"&&route=="status"){Json(stream,200,cloud.Status());return;}
+            if(method=="GET"&&route=="studio-projects"){Json(stream,200,cloud.StudioProjects());return;}
             if(method=="GET"&&route=="update/check"){Json(stream,200,UpdateNotice.Check(Path.GetDirectoryName(webRoot),"fundi-voice-actor-desktop","actor-update.json","actor-app.zip","FundiVoiceActor.exe"));return;}
             if(method!="POST"){Json(stream,405,new{error="Неверный способ запроса."});return;}
             if(route=="login"||route=="activate"){Json(stream,200,cloud.Login(body,route=="activate"));return;}
