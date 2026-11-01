@@ -68,6 +68,17 @@ namespace FundiVoice {
             // Only the owner can approve; no old credentials are changed here.
             return CloudHttp.Request(server,"/v1/actor/recovery/request","POST",new{identifier=identifier},null);
         }
+        // An authorized actor may read only the public studio-stage projection.
+        public object StudioProjects(){
+            Poll();
+            string server,access;
+            lock(gate){
+                if(!Authenticated())throw new CloudFault(401,"login_required","Сначала войди в аккаунт.");
+                server=JsonData.S(session,"server");access=JsonData.S(session,"accessToken");
+            }
+            if(String.IsNullOrEmpty(access))throw new CloudFault(401,"session_expired","Обнови вход в аккаунт.");
+            return CloudHttp.Request(server,"/v1/actor/studio-projects","GET",null,access);
+        }
         public object SyncNow(){Poll();return Status();}
         public object SetRecording(string roleId,bool recording){
             lock(syncGate){
