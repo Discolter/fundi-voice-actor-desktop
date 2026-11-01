@@ -1,0 +1,30 @@
+
+/* Read-only cast overview; inherits the Actor application's themes and project cards. */
+.studio-projects-notice{display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+ padding:14px 17px;margin:0 0 16px;border:1px solid var(--line,#34455d);
+ border-radius:14px;background:var(--panel,#17243a);font-size:13px}
+.studio-projects-notice strong{white-space:nowrap;color:var(--text,#eef4ff)}
+.studio-projects-notice span,.studio-projects-total{color:var(--muted,#a7b3c5)}
+.studio-projects-total{font-size:12px;margin:0 0 12px}
+.studio-project-card .project-heading{min-width:0}
+.studio-project-progress{display:flex;flex-direction:column;text-align:right;gap:3px;
+ font-size:15px;font-weight:800;white-space:nowrap;color:var(--text,#f1f5ff)}
+.studio-project-progress small{font-size:11px;font-weight:500;color:var(--muted,#a7b3c5)}
+.studio-progress-track{height:5px;background:rgba(128,151,182,.15);overflow:hidden}
+.studio-progress-track span{height:100%;display:block;background:linear-gradient(90deg,#5d97e9,#4bca9d);
+ transition:width .3s ease}
+.studio-roster-row{display:grid;grid-template-columns:minmax(160px,1.25fr) minmax(120px,1fr) minmax(120px,auto);
+ align-items:center;gap:12px;padding:13px 15px;border:1px solid var(--line,#35445c);
+ border-radius:12px;background:var(--panel,#172438);min-width:0}
+.studio-roster-row+.studio-roster-row{margin-top:8px}
+.studio-roster-character{min-width:0;display:flex;flex-direction:column;gap:4px}
+.studio-roster-character strong{overflow-wrap:anywhere}
+.studio-roster-character small{font-size:11px;color:var(--muted,#97a8bb)}
+.studio-roster-actor{overflow-wrap:anywhere;font-size:13px;color:var(--text,#eef4ff)}
+.studio-roster-row .role-stage{text-align:center;justify-self:end;white-space:normal}
+.studio-projects-empty,.studio-projects-error{padding:24px 18px;border:1px solid var(--line,#34455d);
+ border-radius:14px;color:var(--muted,#a7b3c5)}
+.studio-projects-error{color:#eb8a92}
+@media(max-width:680px){.studio-roster-row{grid-template-columns:1fr auto;gap:8px}
+.studio-roster-actor{grid-column:1}.studio-roster-row .role-stage{grid-row:1/3;grid-column:2;max-width:150px}
+.studio-project-progress small{display:none}}
