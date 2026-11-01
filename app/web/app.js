@@ -21,7 +21,9 @@ async function loadStudioProjects(){
   studioProjectsLoading=true;studioProjectsError='';
   if(ui.page==='studio-projects')render();
   try{
+    const account=state.username;
     const received=await api('studio-projects');
+    if(!state.authenticated||state.username!==account)return;
     if(!Array.isArray(received.roles))throw Error('Сервер прислал некорректный список.');
     studioProjectsData=received;lastStudioProjectsFetch=Date.now();
   }catch(problem){studioProjectsError=problem.message||'Список проектов временно недоступен.';}
