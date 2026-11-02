@@ -105,3 +105,27 @@ body[data-theme="light"] .fv-age-red{color:#a92e43;background:#ffe5e9}
 .vacation-form .vacation-indefinite-label{display:flex;flex-direction:row;align-items:center;gap:11px;cursor:pointer;font-size:13px;font-weight:700;line-height:1.4;color:var(--text)}
 .vacation-form .vacation-indefinite-label input[type=checkbox]{width:20px;height:20px;min-width:20px;margin:0;padding:0;accent-color:var(--brand1,#80baff);cursor:pointer}
 .vacation-form input[type=date]:disabled{opacity:.45;cursor:not-allowed}
+
+
+/* Read-only full studio catalog visible to all signed-in actors. */
+.studio-catalog-intro{font-size:13px;color:var(--muted);margin:0 0 18px;line-height:1.6}
+.studio-catalog-summary{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin:0 0 13px}
+.studio-catalog-project{background:var(--panel2,#1a2c43);border:1px solid var(--line,#34455b);border-radius:15px;overflow:hidden;margin:0 0 12px}
+.studio-catalog-project>summary{padding:17px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:9px;cursor:pointer}
+.studio-catalog-project>summary strong{font-size:16px;color:var(--text)}
+.studio-catalog-project>summary span{font-size:12px;color:var(--muted)}
+.studio-catalog-episodes{padding:0 16px 15px}
+.studio-catalog-episode{border-top:1px solid var(--line);padding:13px 0}
+.studio-catalog-episode h3{font-size:13px;margin:0 0 12px}
+.studio-catalog-roles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:9px}
+.studio-catalog-role{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--panel,#18263a);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+.studio-catalog-role>div{display:grid;gap:4px;min-width:0}
+.studio-catalog-role strong{font-size:13px;overflow-wrap:anywhere}
+.studio-catalog-role small{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.studio-catalog-stage{border-radius:8px;padding:5px 7px;font-size:11px;white-space:nowrap;background:rgba(130,140,150,.15)}
+.studio-catalog-stage.stage-done{color:#68e6a9;background:rgba(45,171,101,.15)}
+.studio-catalog-stage.stage-retake{color:#ff94a0;background:rgba(210,56,73,.17)}
+.studio-catalog-stage.stage-received,.studio-catalog-stage.stage-processed,.studio-catalog-stage.stage-processing{color:#f3d37d;background:rgba(218,164,49,.15)}
+.studio-catalog-stage.stage-recording{color:#80b9ff;background:rgba(60,130,217,.17)}
+.studio-catalog-updated{font-size:11px;color:var(--muted);margin:17px 0 0}
+@media(max-width:580px){.studio-catalog-project>summary{display:grid}.studio-catalog-role{flex-wrap:wrap}}
