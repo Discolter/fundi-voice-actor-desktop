@@ -250,6 +250,7 @@ namespace FundiVoice {
 
         static void Route(NetworkStream stream,string method,string route,Dictionary<string,object> body){
             if(method=="GET"&&route=="status"){Json(stream,200,cloud.Status());return;}
+            if(method=="GET"&&route=="studio-projects"){Json(stream,200,cloud.StudioProjects());return;}
             if(method=="GET"&&route=="update/check"){Json(stream,200,UpdateNotice.Check(Path.GetDirectoryName(webRoot),"fundi-voice-actor-desktop","actor-update.json","actor-app.zip","FundiVoiceActor.exe"));return;}
             if(method!="POST"){Json(stream,405,new{error="Неверный способ запроса."});return;}
             if(route=="login"||route=="activate"){Json(stream,200,cloud.Login(body,route=="activate"));return;}
