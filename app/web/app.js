@@ -14,6 +14,40 @@ let state={authenticated:false,server:'',username:'',view:null,error:'',lastSync
 let ui={page:'projects',query:'',filter:'all',roleSort:'default',activate:false,recover:false,theme:'aurora',motion:true,expanded:new Set(),collapsed:new Set()},token='',formBusy=false,lastStatus='';
 try{const saved=JSON.parse(localStorage.getItem('fundi-actor-appearance')||'{}');if(THEMES.some(t=>t[0]===saved.theme))ui.theme=saved.theme;if(saved.motion===false)ui.motion=false;if(ACTOR_ROLE_SORTS.some(([id])=>id===saved.roleSort))ui.roleSort=saved.roleSort;}catch{}
 let notificationLimit=50,recordingRoleFilter='',hiddenTransferId='';
+
+let studioCatalog=null,studioCatalogLoading=false,studioCatalogError='';
+const studioStages={waiting:'Жду запись',recording:'В записи',received:'Получено',processing:'Обрабатываю',processed:'Обрабатываю',retake:'На перезапись',done:'Принято'};
+async function loadStudioCatalog(){
+  if(!state.authenticated)return;
+  studioCatalog=null;studioCatalogLoading=true;studioCatalogError='';
+  render();
+  try{studioCatalog=await api('studio-projects');}
+  catch(error){studioCatalogError=error.message||'Не удалось загрузить проекты студии.';}
+  finally{studioCatalogLoading=false;if(ui.page==='studioProjects')render();}
+}
+function renderStudioCatalog(){
+  const intro='<p class="studio-catalog-intro">Все активные проекты, распределение персонажей и этапы озвучки. Доступно только чтение.</p>';
+  if(studioCatalogLoading)return intro+empty('Загружаем проекты','Получаем актуальные этапы озвучки из облака.');
+  if(studioCatalogError)return intro+empty('Не удалось получить проекты',studioCatalogError);
+  if(!studioCatalog)return intro+empty('Проекты студии','Открой вкладку для загрузки актуального списка.');
+  const q=ui.query.trim().toLocaleLowerCase('ru');
+  const items=(Array.isArray(studioCatalog.projects)?studioCatalog.projects:[]).filter(project=>
+    !q||[project.title,project.season,...(project.episodes||[]).flatMap(ep=>[ep.title,ep.number,...(ep.roles||[]).flatMap(r=>[r.character,r.actor])])].join(' ').toLocaleLowerCase('ru').includes(q));
+  return intro+'<div class="studio-catalog-summary"><span>'+items.length+' проектов</span><span>Сведения только для просмотра</span></div>'+
+    (items.map(project=>{
+      const episodes=Array.isArray(project.episodes)?project.episodes:[];
+      const total=episodes.flatMap(ep=>ep.roles||[]);
+      const done=total.filter(r=>r.status==='done').length;
+      return '<details class="studio-catalog-project"><summary><strong>'+e(project.title||'Проект')+'</strong><span>'+(project.season?'Сезон '+e(project.season)+' · ':'')+episodes.length+' сер. · '+done+'/'+total.length+' ролей принято</span></summary>'+
+      '<div class="studio-catalog-episodes">'+episodes.map(ep=>'<section class="studio-catalog-episode"><h3>Серия '+e(ep.number||'—')+(ep.title?' · '+e(ep.title):'')+'</h3>'+
+      '<div class="studio-catalog-roles">'+(ep.roles||[]).map(r=>{
+        const stage=studioStages[r.status]||'Не указан',kind=Object.prototype.hasOwnProperty.call(studioStages,r.status)?r.status:'unknown';
+        return '<article class="studio-catalog-role"><div><strong>'+e(r.character||'Персонаж')+'</strong><small>'+e(r.actor||'Не назначен')+(Number.isInteger(r.lineCount)?' · '+r.lineCount+' репл.':'')+'</small></div><span class="studio-catalog-stage stage-'+kind+'">'+e(stage)+'</span></article>';
+      }).join('')+'</div></section>').join('')+'</div></details>';
+    }).join('')||empty(ui.query?'Ничего не найдено':'Проектов пока нет',ui.query?'Попробуй изменить запрос.':'Они появятся после публикации данных из Studio.'))+
+    (studioCatalog.updatedAt?'<p class="studio-catalog-updated">Обновлено в Studio: '+e(stamp(studioCatalog.updatedAt))+'</p>':'');
+}
+
 function renderTransferNotice(){document.querySelector('#file-transfer-slot').innerHTML=transferPanel(state.transfer,'actor-',hiddenTransferId);}
 const roles=()=>(Array.isArray(state.view?.feed?.roles)?state.view.feed.roles:[]).map(role=>reviewedRole(role,state.view?.reviews||[],state.mailbox?.pending||[]));
 const unread=()=>Number(state.mailbox?.unread)||0;
@@ -60,7 +94,7 @@ function render(){
   if(!state.authenticated){renderLogin();return;}
   const all=roles(),active=visibleAcceptedRoles(all,state.view?.hiddenRoleIds),archived=acceptedHiddenRoles(all,state.view?.hiddenRoleIds),debts=active.filter(isDebt),projects=groupProjects(active);
   const focused=document.activeElement?.id==='search',caret=focused?document.activeElement.selectionStart:0;
-  app.innerHTML=`<div class="actor-shell"><aside class="actor-sidebar"><div class="actor-brand"><img src="brand-mark.png" alt=""><span>Fundi Voice<small>Actor</small></span></div><nav><button class="nav-item ${ui.page==='projects'?'active':''}" data-page="projects">${icon('projects')}<span>Проекты</span><b>${projects.length}</b></button><button class="nav-item ${ui.page==='debts'?'active':''}" data-page="debts">${icon('debts')}<span>Мои долги</span><b>${debts.length}</b></button><button class="nav-item ${ui.page==='history'?'active':''}" data-page="history">${icon('history')}<span>История</span><b>${archived.length}</b></button><button class="nav-item ${ui.page==='files'?'active':''}" data-action="recordings" aria-current="${ui.page==='files'?'page':'false'}">${icon('files')}<span>Мои файлы</span></button></nav><div class="actor-profile"><div class="profile-initial">${e(state.username.slice(0,1).toUpperCase())}</div><div><strong>${e(state.username)}</strong><small>Актёр студии</small></div><button class="icon-btn" data-action="settings" aria-label="Настройки" title="Настройки">${icon('settings')}</button></div><button class="nav-item vacation-sidebar ${ui.page==='vacation'?'active':''}" data-page="vacation">${icon('vacation')}<span>Отпуск</span>${state.vacation?.current?.status==='active'?'<b>В отпуске</b>':''}</button></aside><main class="actor-main"><header class="actor-top"><div><span class="eyebrow">ЛИЧНОЕ ПРОСТРАНСТВО</span><h1>${ui.page==='vacation'?'Отпуск':ui.page==='files'?'Мои файлы':ui.page==='projects'?'Твои проекты':ui.page==='history'?'История ролей':'Мои долги'}</h1></div><div class="actor-tools"><button class="icon-btn notification-bell" data-action="messages" aria-label="Уведомления" title="Уведомления">${icon('bell')}<b data-message-count ${unread()||state.mailbox?.failed?.length?'':'hidden'}>${unread()||(state.mailbox?.failed?.length?'!':'')}</b></button><label class="actor-search">${icon('search')}<input id="search" placeholder="Найти роль или проект" value="${e(ui.query)}"></label><button class="btn ghost icon-text" data-action="sync" ${state.busy?'disabled':''}>${icon('sync')}${state.busy?'Обновляем…':'Обновить'}</button></div></header><div class="sync-line"><span class="sync-dot ${state.error?'offline':''}"></span><span>${state.error?'Нет свежего обновления':'Обновлено'} · ${e(stamp(state.lastSync))}</span></div>${state.error?`<div class="offline-note">${e(state.error)} Сохранённые назначения доступны для просмотра.</div>`:''}<div class="actor-content">${ui.page==='vacation'?vacationView():ui.page==='files'?actorFilesContent(''):ui.page==='projects'?renderProjects(active):ui.page==='history'?renderHistory(archived):renderDebts(active)}</div><footer>Назначения обновляются раз в минуту, пока приложение работает. Закрытие окна оставляет приложение в трее.</footer></main></div>`;
+  app.innerHTML=`<div class="actor-shell"><aside class="actor-sidebar"><div class="actor-brand"><img src="brand-mark.png" alt=""><span>Fundi Voice<small>Actor</small></span></div><nav><button class="nav-item ${ui.page==='projects'?'active':''}" data-page="projects">${icon('projects')}<span>Проекты</span><b>${projects.length}</b></button><button class="nav-item ${ui.page==='studioProjects'?'active':''}" data-page="studioProjects">${icon('projects')}<span>Проекты студии</span></button><button class="nav-item ${ui.page==='debts'?'active':''}" data-page="debts">${icon('debts')}<span>Мои долги</span><b>${debts.length}</b></button><button class="nav-item ${ui.page==='history'?'active':''}" data-page="history">${icon('history')}<span>История</span><b>${archived.length}</b></button><button class="nav-item ${ui.page==='files'?'active':''}" data-action="recordings" aria-current="${ui.page==='files'?'page':'false'}">${icon('files')}<span>Мои файлы</span></button></nav><div class="actor-profile"><div class="profile-initial">${e(state.username.slice(0,1).toUpperCase())}</div><div><strong>${e(state.username)}</strong><small>Актёр студии</small></div><button class="icon-btn" data-action="settings" aria-label="Настройки" title="Настройки">${icon('settings')}</button></div><button class="nav-item vacation-sidebar ${ui.page==='vacation'?'active':''}" data-page="vacation">${icon('vacation')}<span>Отпуск</span>${state.vacation?.current?.status==='active'?'<b>В отпуске</b>':''}</button></aside><main class="actor-main"><header class="actor-top"><div><span class="eyebrow">ЛИЧНОЕ ПРОСТРАНСТВО</span><h1>${ui.page==='vacation'?'Отпуск':ui.page==='files'?'Мои файлы':ui.page==='projects'?'Твои проекты':ui.page==='studioProjects'?'Проекты студии':ui.page==='history'?'История ролей':'Мои долги'}</h1></div><div class="actor-tools"><button class="icon-btn notification-bell" data-action="messages" aria-label="Уведомления" title="Уведомления">${icon('bell')}<b data-message-count ${unread()||state.mailbox?.failed?.length?'':'hidden'}>${unread()||(state.mailbox?.failed?.length?'!':'')}</b></button><label class="actor-search">${icon('search')}<input id="search" placeholder="Найти роль или проект" value="${e(ui.query)}"></label><button class="btn ghost icon-text" data-action="sync" ${state.busy?'disabled':''}>${icon('sync')}${state.busy?'Обновляем…':'Обновить'}</button></div></header><div class="sync-line"><span class="sync-dot ${state.error?'offline':''}"></span><span>${state.error?'Нет свежего обновления':'Обновлено'} · ${e(stamp(state.lastSync))}</span></div>${state.error?`<div class="offline-note">${e(state.error)} Сохранённые назначения доступны для просмотра.</div>`:''}<div class="actor-content">${ui.page==='vacation'?vacationView():ui.page==='files'?actorFilesContent(''):ui.page==='projects'?renderProjects(active):ui.page==='studioProjects'?renderStudioCatalog():ui.page==='history'?renderHistory(archived):renderDebts(active)}</div><footer>Назначения обновляются раз в минуту, пока приложение работает. Закрытие окна оставляет приложение в трее.</footer></main></div>`;
   if(focused){const input=document.querySelector('#search');input.focus();input.setSelectionRange(caret,caret);}
 }
 function renderRecovery(){
@@ -186,7 +220,7 @@ async function update(manual=false){
   const next=manual?await api('sync',{}):await api('status');
   const lostAccess=state.authenticated&&!next.authenticated;
   const changed=JSON.stringify(next)!==lastStatus;state=next;lastStatus=JSON.stringify(next);
-  if(lostAccess){modal.close();ui.query='';ui.expanded.clear();ui.collapsed.clear();render();return;}
+  if(lostAccess){studioCatalog=null;studioCatalogError='';modal.close();ui.query='';ui.expanded.clear();ui.collapsed.clear();render();return;}
   updateMessageBadge();renderTransferNotice();
   if(changed&&modal.open&&modal.dataset.view==='recordings')renderActorFiles();
   if(changed&&modal.open&&modal.dataset.view==='messages')showMessages();
@@ -195,7 +229,7 @@ async function update(manual=false){
 document.addEventListener('click',async event=>{
   const button=event.target.closest('button');if(!button)return;
   try{
-    if(button.dataset.page){ui.page=button.dataset.page;ui.query='';render();}
+    if(button.dataset.page){ui.page=button.dataset.page;ui.query='';render();if(ui.page==='studioProjects')await loadStudioCatalog();}
     if(button.dataset.auth){ui.activate=button.dataset.auth==='activate';render();}
     if(button.dataset.action==='recover'){ui.recover=true;render();return;}
     if(button.dataset.action==='back-login'){ui.recover=false;render();return;}
@@ -256,9 +290,9 @@ document.addEventListener('click',async event=>{
       if(role){ui.page=(state.view?.hiddenRoleIds||[]).includes(role.roleId)?'history':'projects';ui.query=role.character;ui.expanded.add(role.projectId);ui.collapsed.delete(role.projectId);render();}
       else{render();toast('Эта роль больше не назначена тебе.');}
     }
-    if(action==='sync'){button.disabled=true;await update(true);toast(state.error||'Роли обновлены',!!state.error);}
+    if(action==='sync'){button.disabled=true;await update(true);if(ui.page==='studioProjects')await loadStudioCatalog();toast(state.error||'Роли обновлены',!!state.error);}
     if(action==='logout'){
-      hiddenTransferId='';state=await api('logout',{});ui.query='';ui.page='projects';ui.expanded.clear();ui.collapsed.clear();modal.close();render();renderTransferNotice();toast('Выход выполнен. Сохранённые роли удалены с этого компьютера.');
+      hiddenTransferId='';studioCatalog=null;studioCatalogError='';state=await api('logout',{});ui.query='';ui.page='projects';ui.expanded.clear();ui.collapsed.clear();modal.close();render();renderTransferNotice();toast('Выход выполнен. Сохранённые роли удалены с этого компьютера.');
     }
   }catch(error){toast(error.message,true);}
   finally{if(button.isConnected)button.disabled=false;}
