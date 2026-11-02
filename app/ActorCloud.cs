@@ -69,6 +69,18 @@ namespace FundiVoice {
             return CloudHttp.Request(server,"/v1/actor/recovery/request","POST",new{identifier=identifier},null);
         }
         public object SyncNow(){Poll();return Status();}
+        // Authenticated read-only catalog; never use an owner Studio token here.
+        public object StudioProjects(){
+            lock(syncGate){
+                if(!Authenticated())throw new CloudFault(401,"login_required","Сначала войди в аккаунт.");
+                Poll(); // Refresh an expiring actor session using the existing workflow.
+                string server,access;
+                lock(gate){server=JsonData.S(session,"server");access=JsonData.S(session,"accessToken");}
+                if(String.IsNullOrEmpty(access))throw new CloudFault(401,"session_expired","Войди в аккаунт заново.");
+                return CloudHttp.Request(server,"/v1/actor/studio-projects","GET",null,access);
+            }
+        }
+
         public object SetRecording(string roleId,bool recording){
             lock(syncGate){
                 if(!Authenticated())throw new CloudFault(401,"login_required","Сначала войди в аккаунт.");
