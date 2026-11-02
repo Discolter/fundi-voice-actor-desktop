@@ -92,3 +92,16 @@
 @media(max-width:850px){.fv-mirror-grid{grid-template-columns:1fr}.fv-mirror-grid.as-list .fv-mirror-card{display:flex;min-height:180px}.fv-mirror-role-head{display:none}.fv-mirror-role{grid-template-columns:1fr 1fr;gap:13px}.fv-mirror-filters label{flex:1 1 175px}}
 @media(max-width:540px){.fv-mirror-top h2{font-size:23px}.fv-mirror-card{min-height:178px}.fv-mirror-role{grid-template-columns:1fr}.fv-mirror-filters label{flex:1 1 100%}.fv-mirror-detail-title h2{font-size:21px}.fv-mirror-detail-head>.fv-mirror-readonly{flex-basis:100%;width:max-content}.fv-mirror-detail-tabs small{display:none}}
 @media(prefers-reduced-motion:reduce){.fv-mirror-card{transition:none}.fv-mirror-card:hover{transform:none}}
+
+/* Read-only actor-visible casting importance */
+.fv-mirror-tier-section{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:11px 13px;border-left:3px solid var(--tier-color,#8d99ac);border-block:1px solid var(--mirror-line,rgba(150,180,220,.18));
+  background:color-mix(in srgb,var(--tier-color,#8d99ac) 9%,transparent);border-radius:4px}
+.fv-mirror-tier-section strong{font-size:12px;font-weight:750}
+.fv-mirror-tier-section small{color:var(--muted,var(--mirror-muted,#9cabbe));font-size:11px}
+.fv-mirror-tier-main{--tier-color:#7aaeff}
+.fv-mirror-tier-supporting{--tier-color:#d5b06f}
+.fv-mirror-tier-extras{--tier-color:#99a4b6}
+.fv-mirror-tier-badge{display:inline-flex;margin-top:4px;padding:2px 7px;border-radius:6px;
+  background:color-mix(in srgb,var(--tier-color,#8d99ac) 12%,transparent);color:var(--tier-color,#9daabc);
+  border:1px solid color-mix(in srgb,var(--tier-color,#8d99ac) 22%,transparent);font-size:10px;font-weight:650}
