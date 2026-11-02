@@ -16,14 +16,14 @@ let ui={page:'projects',query:'',filter:'all',roleSort:'default',activate:false,
 try{const saved=JSON.parse(localStorage.getItem('fundi-actor-appearance')||'{}');if(THEMES.some(t=>t[0]===saved.theme))ui.theme=saved.theme;if(saved.motion===false)ui.motion=false;if(ACTOR_ROLE_SORTS.some(([id])=>id===saved.roleSort))ui.roleSort=saved.roleSort;}catch{}
 let notificationLimit=50,recordingRoleFilter='',hiddenTransferId='';
 
-let studioCatalog=null,studioCatalogLoading=false,studioCatalogError='';
+let studioCatalog=null,studioCatalogLoading=false,studioCatalogError='',studioCatalogCheckedAt=0;
 let studioMirror={filter:'active',sort:'name',layout:'grid',projectId:'',episodeId:'',roleStatus:'all',roleActor:'all',roleOrder:'original'};
 async function loadStudioCatalog(){
-  if(!state.authenticated)return;
+  if(!state.authenticated||studioCatalogLoading)return;
   studioCatalogLoading=true;studioCatalogError='';render();
   try{studioCatalog=await api('studio-projects');}
   catch(error){studioCatalogError=error.message||'Не удалось загрузить проекты студии.';}
-  finally{studioCatalogLoading=false;if(ui.page==='studioProjects')render();}
+  finally{studioCatalogLoading=false;studioCatalogCheckedAt=Date.now();if(ui.page==='studioProjects')render();}
 }
 function renderStudioCatalog(){
   if(studioCatalogLoading&&!studioCatalog)return empty('Загружаем проекты','Получаем актуальные данные из Studio.');
@@ -234,6 +234,7 @@ async function update(manual=false){
   if(changed&&modal.open&&modal.dataset.view==='recordings')renderActorFiles();
   if(changed&&modal.open&&modal.dataset.view==='messages')showMessages();
   if(changed&&(state.authenticated||!document.querySelector('#auth-form input:focus'))&&!modal.open)render();
+  if(state.authenticated&&ui.page==='studioProjects'&&(manual||Date.now()-studioCatalogCheckedAt>=60000))await loadStudioCatalog();
 }
 document.addEventListener('click',async event=>{
   const button=event.target.closest('button');if(!button)return;
@@ -299,7 +300,7 @@ document.addEventListener('click',async event=>{
       if(role){ui.page=(state.view?.hiddenRoleIds||[]).includes(role.roleId)?'history':'projects';ui.query=role.character;ui.expanded.add(role.projectId);ui.collapsed.delete(role.projectId);render();}
       else{render();toast('Эта роль больше не назначена тебе.');}
     }
-    if(action==='sync'){button.disabled=true;await update(true);if(ui.page==='studioProjects')await loadStudioCatalog();toast(state.error||'Роли обновлены',!!state.error);}
+    if(action==='sync'){button.disabled=true;await update(true);toast(state.error||studioCatalogError||'Роли обновлены',!!(state.error||studioCatalogError));}
     if(action==='logout'){
       hiddenTransferId='';studioCatalog=null;studioCatalogError='';state=await api('logout',{});ui.query='';ui.page='projects';ui.expanded.clear();ui.collapsed.clear();modal.close();render();renderTransferNotice();toast('Выход выполнен. Сохранённые роли удалены с этого компьютера.');
     }

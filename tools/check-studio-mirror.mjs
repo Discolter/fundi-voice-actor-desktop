@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
 import {renderStudioMirror} from '../app/web/studio-projects-view.js';
 const source=readFileSync(new URL('../app/web/app.js',import.meta.url),'utf8');
 const host=readFileSync(new URL('../app/ActorHost.cs',import.meta.url),'utf8');
@@ -14,3 +15,27 @@ const detail=renderStudioMirror(catalog,{projectId:'p'});
 for(const value of ['data-mirror-episode','Эмилия','Анна','В записи'])assert.ok(detail.includes(value),value);
 assert.ok(!detail.includes('data-action="save"'));
 console.log('Actor read-only Studio mirror navigation and asset delivery checks passed');
+let clock=100000,version=1,catalogRequests=0;
+const context=vm.createContext({
+  Date:class extends Date {static now(){return clock;}},
+  state:{authenticated:true},ui:{page:'studioProjects'},lastStatus:'',
+  modal:{open:false},document:{querySelector:()=>null},
+  render(){},renderTransferNotice(){},updateMessageBadge(){},
+  api:async route=>{
+    if(route==='studio-projects'){catalogRequests++;return {projects:[{id:'p',cover:'picture-'+version}]};}
+    return {authenticated:true};
+  }
+});
+const catalogCode=source.slice(source.indexOf('let studioCatalog='),source.indexOf('function renderStudioCatalog'));
+const updateCode=source.slice(source.indexOf('async function update(manual=false)'),source.indexOf("document.addEventListener('click',async event=>"));
+vm.runInContext(catalogCode+'\n'+updateCode+'\nglobalThis.refreshMirror=update;globalThis.savedMirror=()=>studioCatalog;',context);
+await context.refreshMirror(true);
+assert.equal(context.savedMirror().projects[0].cover,'picture-1');
+version=2;
+await context.refreshMirror(false);
+assert.equal(catalogRequests,1,'Status polling does not fetch the entire catalog every second');
+clock+=61000;await context.refreshMirror(false);
+assert.equal(context.savedMirror().projects[0].cover,'picture-2','Background sync updates already-open Studio cards');
+version=3;await context.refreshMirror(true);
+assert.equal(context.savedMirror().projects[0].cover,'picture-3','Manual refresh bypasses catalog throttle');
+console.log('Actor mirror manual refresh and bounded background refresh passed');
