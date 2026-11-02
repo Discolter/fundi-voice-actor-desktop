@@ -44,6 +44,9 @@ jobs:
           node ./tools/check-telegram-sources.mjs
           if($LASTEXITCODE -ne 0){ throw 'Telegram sources Actor UI check failed' }
           node --check ./app/web/app.js
+          node --check ./app/web/studio-projects-view.js
+          node ./tools/check-studio-mirror.mjs
+          if($LASTEXITCODE -ne 0){throw 'Studio mirror Actor navigation check failed'}
           node ./tools/check-role-age.mjs
           node ./tools/check-actor-recording.mjs
           if($LASTEXITCODE -ne 0){throw 'Actor recording regression failed'}
