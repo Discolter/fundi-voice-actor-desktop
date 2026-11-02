@@ -54,13 +54,22 @@ function list(catalog,ui){
   (projects.length?'<div class="fv-mirror-grid '+(ui.layout==='table'?'as-list':'')+'">'+projects.map(card).join('')+'</div>':
     '<div class="fv-mirror-empty">'+(query?'По запросу ничего не найдено.':'Проекты пока не опубликованы в облаке Studio.')+'</div>')+'</div>';
 }
+const fvTiers=[['main','Главные роли'],['supporting','Второстепенные роли'],['extras','Массовка']];
+const fvTier=value=>fvTiers.some(([id])=>id===value)?value:'supporting';
+const fvTierLabel=value=>fvTiers.find(([id])=>id===fvTier(value))[1];
+function fvTieredMirrorRows(rows){
+  return fvTiers.map(([id,title])=>{
+    const group=rows.filter(role=>fvTier(role.roleTier)===id);
+    return group.length?'<div class="fv-mirror-tier-section fv-mirror-tier-'+id+'"><strong>'+title+'</strong><small>'+group.length+' рол.</small></div>'+group.map(roleRow).join(''):'';
+  }).join('');
+}
 function roleRow(role){
  const rawStage=Object.prototype.hasOwnProperty.call(roleNames,role.status)?role.status:'unknown';
  const status=roleNames[role.status]||'Этап не указан';
  const ageMarkup=age(role.createdAt);
  return '<div class="fv-mirror-role '+(rawStage==='done'?'accepted':rawStage==='retake'?'retake':'')+'">'+
    '<div class="fv-mirror-character">'+poster(role.image,role.character)+
-    '<div><strong>'+esc(role.character||'Без имени')+'</strong><div class="fv-mirror-role-meta">'+
+    '<div><strong>'+esc(role.character||'Без имени')+'</strong><div><span class="fv-mirror-tier-badge fv-mirror-tier-'+fvTier(role.roleTier)+'">'+esc(fvTierLabel(role.roleTier))+'</span></div><div class="fv-mirror-role-meta">'+
     (Number.isInteger(role.lineCount)?'<span class="fv-mirror-lines">'+role.lineCount+' репл.</span>':'')+
     (role.voiceGender?'<span>'+esc(role.voiceGender==='male'?'Мужской':role.voiceGender==='female'?'Женский':role.voiceGender)+'</span>':'')+'</div></div></div>'+
    '<div class="fv-mirror-actor">'+(safeImg(role.avatar)?'<img src="'+esc(role.avatar)+'" alt="" loading="lazy">':'<span class="fv-mirror-avatar">◉</span>')+'<span>'+esc(role.actor||'Не назначен')+'</span></div>'+
@@ -99,7 +108,7 @@ function detail(catalog,ui){
     '<label>Порядок<select data-mirror-role-order>'+options([['original','По порядку'],['linesAsc','Меньше реплик'],['linesDesc','Больше реплик']],order)+'</select></label>'+
     '<span class="fv-mirror-visible">Показано '+filtered.length+' из '+roles.length+'</span></div>'+
    '<div class="fv-mirror-role-table"><div class="fv-mirror-role-head"><span>Персонаж</span><span>Актёр</span><span>Обработка</span><span>Возраст</span></div>'+
-   (filtered.length?filtered.map(roleRow).join(''):'<div class="fv-mirror-empty">Нет ролей по выбранным фильтрам.</div>')+'</div></div>';
+   (filtered.length?fvTieredMirrorRows(filtered):'<div class="fv-mirror-empty">Нет ролей по выбранным фильтрам.</div>')+'</div></div>';
 }
 export function renderStudioMirror(catalog,ui={}){
  if(!catalog||!Array.isArray(catalog.projects))return '<div class="fv-mirror-empty">Проекты студии пока не загружены.</div>';

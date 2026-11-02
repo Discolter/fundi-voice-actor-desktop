@@ -129,3 +129,16 @@ body[data-theme="light"] .fv-age-red{color:#a92e43;background:#ffe5e9}
 .studio-catalog-stage.stage-recording{color:#80b9ff;background:rgba(60,130,217,.17)}
 .studio-catalog-updated{font-size:11px;color:var(--muted);margin:17px 0 0}
 @media(max-width:580px){.studio-catalog-project>summary{display:grid}.studio-catalog-role{flex-wrap:wrap}}
+
+/* Personal roles: categories supplied by Studio, read-only for actors. */
+.actor-tier-header{--tier:#9ca8b9;display:flex;align-items:center;justify-content:space-between;gap:10px;
+ width:100%;grid-column:1/-1;padding:10px 13px;margin:8px 0 3px;border-radius:7px;
+ background:color-mix(in srgb,var(--tier) 9%,transparent);border-left:3px solid var(--tier)}
+.actor-tier-header strong{font-size:12px}.actor-tier-header small{font-size:11px;color:var(--muted,#a5b1c2)}
+.actor-tier-main{--tier:#83b7ff}
+.actor-tier-supporting{--tier:#d6b373}
+.actor-tier-extras{--tier:#a4afc0}
+.actor-tier-label{--tier:#b9c2ce;display:inline-flex;align-items:center;white-space:nowrap;
+ font-size:10px;font-weight:700;padding:2px 7px;margin:2px 4px;border-radius:6px;
+ border:1px solid color-mix(in srgb,var(--tier) 30%,transparent);
+ background:color-mix(in srgb,var(--tier) 10%,transparent);color:var(--tier)}
