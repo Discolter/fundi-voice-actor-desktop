@@ -1,4 +1,5 @@
 import {formatBytes,storageMeter,transferPanel,fileStatus} from './file-tools.js';
+import {renderStudioMirror} from './studio-projects-view.js';
 import {ageBadge} from './age.js';
 import {startUpdateNotice} from './update-notice.js';
 import {openFileBrowser} from './file-browser.js';
@@ -16,37 +17,45 @@ try{const saved=JSON.parse(localStorage.getItem('fundi-actor-appearance')||'{}')
 let notificationLimit=50,recordingRoleFilter='',hiddenTransferId='';
 
 let studioCatalog=null,studioCatalogLoading=false,studioCatalogError='';
-const studioStages={waiting:'Жду запись',recording:'В записи',received:'Получено',processing:'Обрабатываю',processed:'Обрабатываю',retake:'На перезапись',done:'Принято'};
+let studioMirror={filter:'active',sort:'name',layout:'grid',projectId:'',episodeId:'',roleStatus:'all',roleActor:'all',roleOrder:'original'};
 async function loadStudioCatalog(){
   if(!state.authenticated)return;
-  studioCatalog=null;studioCatalogLoading=true;studioCatalogError='';
-  render();
+  studioCatalogLoading=true;studioCatalogError='';render();
   try{studioCatalog=await api('studio-projects');}
   catch(error){studioCatalogError=error.message||'Не удалось загрузить проекты студии.';}
   finally{studioCatalogLoading=false;if(ui.page==='studioProjects')render();}
 }
 function renderStudioCatalog(){
-  const intro='<p class="studio-catalog-intro">Все активные проекты, распределение персонажей и этапы озвучки. Доступно только чтение.</p>';
-  if(studioCatalogLoading)return intro+empty('Загружаем проекты','Получаем актуальные этапы озвучки из облака.');
-  if(studioCatalogError)return intro+empty('Не удалось получить проекты',studioCatalogError);
-  if(!studioCatalog)return intro+empty('Проекты студии','Открой вкладку для загрузки актуального списка.');
-  const q=ui.query.trim().toLocaleLowerCase('ru');
-  const items=(Array.isArray(studioCatalog.projects)?studioCatalog.projects:[]).filter(project=>
-    !q||[project.title,project.season,...(project.episodes||[]).flatMap(ep=>[ep.title,ep.number,...(ep.roles||[]).flatMap(r=>[r.character,r.actor])])].join(' ').toLocaleLowerCase('ru').includes(q));
-  return intro+'<div class="studio-catalog-summary"><span>'+items.length+' проектов</span><span>Сведения только для просмотра</span></div>'+
-    (items.map(project=>{
-      const episodes=Array.isArray(project.episodes)?project.episodes:[];
-      const total=episodes.flatMap(ep=>ep.roles||[]);
-      const done=total.filter(r=>r.status==='done').length;
-      return '<details class="studio-catalog-project"><summary><strong>'+e(project.title||'Проект')+'</strong><span>'+(project.season?'Сезон '+e(project.season)+' · ':'')+episodes.length+' сер. · '+done+'/'+total.length+' ролей принято</span></summary>'+
-      '<div class="studio-catalog-episodes">'+episodes.map(ep=>'<section class="studio-catalog-episode"><h3>Серия '+e(ep.number||'—')+(ep.title?' · '+e(ep.title):'')+'</h3>'+
-      '<div class="studio-catalog-roles">'+(ep.roles||[]).map(r=>{
-        const stage=studioStages[r.status]||'Не указан',kind=Object.prototype.hasOwnProperty.call(studioStages,r.status)?r.status:'unknown';
-        return '<article class="studio-catalog-role"><div><strong>'+e(r.character||'Персонаж')+'</strong><small>'+e(r.actor||'Не назначен')+(Number.isInteger(r.lineCount)?' · '+r.lineCount+' репл.':'')+'</small></div><span class="studio-catalog-stage stage-'+kind+'">'+e(stage)+'</span></article>';
-      }).join('')+'</div></section>').join('')+'</div></details>';
-    }).join('')||empty(ui.query?'Ничего не найдено':'Проектов пока нет',ui.query?'Попробуй изменить запрос.':'Они появятся после публикации данных из Studio.'))+
-    (studioCatalog.updatedAt?'<p class="studio-catalog-updated">Обновлено в Studio: '+e(stamp(studioCatalog.updatedAt))+'</p>':'');
+  if(studioCatalogLoading&&!studioCatalog)return empty('Загружаем проекты','Получаем актуальные данные из Studio.');
+  if(studioCatalogError&&!studioCatalog)return empty('Проекты недоступны',studioCatalogError);
+  if(!studioCatalog)return empty('Проекты студии','Синхронизируй Studio и открой вкладку ещё раз.');
+  return renderStudioMirror(studioCatalog,{...studioMirror,query:ui.query})+
+    (studioCatalogLoading?'<p class="fv-mirror-muted">Обновляем данные…</p>':'')+
+    (studioCatalogError?'<p class="fv-mirror-muted">'+e(studioCatalogError)+'</p>':'');
 }
+document.addEventListener('click',event=>{
+ const button=event.target.closest('button');if(!button||ui.page!=='studioProjects')return;
+ if(button.hasAttribute('data-mirror-project')){
+   studioMirror.projectId=button.dataset.mirrorProject;studioMirror.episodeId='';
+   studioMirror.roleActor='all';studioMirror.roleStatus='all';ui.query='';render();return;
+ }
+ if(button.hasAttribute('data-mirror-back')){
+   studioMirror.projectId='';studioMirror.episodeId='';ui.query='';render();return;
+ }
+ if(button.dataset.mirrorFilter){studioMirror.filter=button.dataset.mirrorFilter;render();return;}
+ if(button.dataset.mirrorLayout){studioMirror.layout=button.dataset.mirrorLayout;render();}
+});
+document.addEventListener('change',event=>{
+ if(ui.page!=='studioProjects')return;
+ const input=event.target;if(!input?.dataset)return;
+ if(input.hasAttribute('data-mirror-sort'))studioMirror.sort=input.value;
+ else if(input.hasAttribute('data-mirror-episode')){studioMirror.episodeId=input.value;studioMirror.roleStatus='all';studioMirror.roleActor='all';}
+ else if(input.hasAttribute('data-mirror-role-status'))studioMirror.roleStatus=input.value;
+ else if(input.hasAttribute('data-mirror-role-actor'))studioMirror.roleActor=input.value;
+ else if(input.hasAttribute('data-mirror-role-order'))studioMirror.roleOrder=input.value;
+ else return;
+ render();
+});
 
 function renderTransferNotice(){document.querySelector('#file-transfer-slot').innerHTML=transferPanel(state.transfer,'actor-',hiddenTransferId);}
 const roles=()=>(Array.isArray(state.view?.feed?.roles)?state.view.feed.roles:[]).map(role=>reviewedRole(role,state.view?.reviews||[],state.mailbox?.pending||[]));
