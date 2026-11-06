@@ -37,7 +37,7 @@ function card(p){
     '</button>';
 }
 function list(catalog,ui){
-  let projects=(catalog.projects||[]).filter(p=>p&&typeof p.id==='string');
+  let projects=(catalog.projects||[]).filter(p=>p&&!p.hidden&&typeof p.id==='string');
   const mode=ui.filter||'active',query=nameKey(ui.query||'').trim();
   projects=projects.filter(p=>mode==='archive'?p.archived:mode==='favorite'?!p.archived&&p.favorite:!p.archived);
   if(query)projects=projects.filter(p=>nameKey([p.title,p.season,...(p.episodes||[]).flatMap(ep=>[ep.title,ep.number,...rolesOf(ep).flatMap(r=>[r.character,r.actor])])].join(' ')).includes(query));
@@ -78,7 +78,7 @@ function roleRow(role){
   '</div>';
 }
 function detail(catalog,ui){
- const project=(catalog.projects||[]).find(p=>p.id===ui.projectId);
+ const project=(catalog.projects||[]).find(p=>!p.hidden&&p.id===ui.projectId);
  if(!project)return list(catalog,{...ui,projectId:''});
  const episodes=project.episodes||[];
  const ep=episodes.find(e=>e.id===ui.episodeId)||newest(project)||{id:'',roles:[]};
