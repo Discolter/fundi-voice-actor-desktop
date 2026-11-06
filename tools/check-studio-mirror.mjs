@@ -11,6 +11,8 @@ assert.ok(html.includes('studio-projects-view.css'));
 assert.ok(host.includes('"/studio-projects-view.js","/studio-projects-view.css"'));
 const catalog={projects:[{id:'p',title:'РеЗеро',season:'4',archived:false,episodes:[{id:'ep',number:'06',stage:'record',roles:[{character:'Эмилия',actor:'Анна',status:'recording',lineCount:20}]}]}]};
 assert.match(renderStudioMirror(catalog,{filter:'active'}),/data-mirror-project="p"/);
+const frozen={projects:[{...catalog.projects[0],hidden:true}]};
+assert.doesNotMatch(renderStudioMirror(frozen,{filter:'active'}),/data-mirror-project="p"/,'Frozen catalog projects must not be visible to actors');
 const detail=renderStudioMirror(catalog,{projectId:'p'});
 for(const value of ['data-mirror-episode','Эмилия','Анна','В записи'])assert.ok(detail.includes(value),value);
 assert.ok(!detail.includes('data-action="save"'));
