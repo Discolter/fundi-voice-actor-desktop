@@ -212,7 +212,7 @@ function actorFilesContent(roleId){
   const busy=state.transfer?.state==='running';
   return `${storageMeter(state.usedBytes,state.quotaBytes)}<div class="file-toolbar"><button class="btn ghost" data-action="refresh-recordings">Обновить список</button></div>${state.fileError?`<p class="file-error">${e(state.fileError)}</p>`:''}<div class="recording-list">${items.map(f=>{
     const role=roles().find(r=>r.roleId===f.roleId);
-    return `<article class="recording-entry"><strong>${e(f.fileName)}</strong><div class="recording-context">${role?e(role.character+' · '+role.projectTitle):'Роль больше не назначена тебе'}</div><div class="recording-meta"><span>${e(formatBytes(f.size))}</span><span>${e(stamp(f.createdAt))}</span><span>${e(fileStatus(f.status))}</span></div><div class="recording-actions">${role&&f.status!=='deleting'?`<button class="btn ghost" data-action="confirm-recording" data-file="${e(f.fileId)}" ${busy||role.queued?'disabled':''}>${f.status==='ready'?'Сдать загруженное':'Проверить загрузку'}</button>`:''}<button class="btn ghost danger" data-action="delete-recording" data-file="${e(f.fileId)}" ${busy?'disabled':''}>${f.status==='deleting'?'Повторить удаление':'Удалить из облака'}</button></div></article>`;
+    return `<article class="recording-entry"><strong>${e(f.fileName)}</strong><div class="recording-context">${role?e(role.character+' · '+role.projectTitle):'Роль больше не назначена тебе'}</div><div class="recording-meta"><span>${e(formatBytes(f.size))}</span><span>${e(stamp(f.createdAt))}</span><span>${e(fileStatus(f.status))}</span></div><div class="recording-actions">${role&&role.status!=='done'&&f.status!=='deleting'?`<button class="btn ghost" data-action="confirm-recording" data-file="${e(f.fileId)}" ${busy||role.queued?'disabled':''}>${f.status==='ready'?'Сдать загруженное':'Проверить загрузку'}</button>`:''}<button class="btn ghost danger" data-action="delete-recording" data-file="${e(f.fileId)}" ${busy?'disabled':''}>${f.status==='deleting'?'Повторить удаление':'Удалить из облака'}</button></div></article>`;
   }).join('')||'<div class="recording-empty">Файлов пока нет. Открой роль и нажми «Сдать на проверку».</div>'}</div><p class="file-hint">Здесь можно удалить готовую запись или незавершённую загрузку и освободить место. Во время передачи сначала нажми «Отменить передачу».</p>`;
 }
 function showMessages(){
@@ -378,3 +378,4 @@ async function boot(){
   }});setInterval(()=>update().catch(()=>{}),1500);}catch(error){app.innerHTML=empty('Не удалось открыть Actor',error.message);}
 }
 boot();
+

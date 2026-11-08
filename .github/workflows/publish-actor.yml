@@ -37,6 +37,9 @@ jobs:
           if($LASTEXITCODE -ne 0){throw 'Actor .NET Framework C# compilation failed'}
           powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\tools\Test-ActorCache.ps1
           if($LASTEXITCODE -ne 0){throw 'Actor account cache isolation failed'}
+      - name: Build updated Actor bootstrap installer
+        shell: pwsh
+        run: powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\Build-Installer.ps1
       - name: Assemble release archive
         id: version
         shell: pwsh
@@ -66,7 +69,7 @@ jobs:
           $tag="v$version"
           gh release view $tag --repo $env:GITHUB_REPOSITORY 2>$null
           if($LASTEXITCODE -eq 0){ Write-Host "Release $tag already exists. Bump app/VERSION.txt to publish another."; exit 0 }
-          gh release create $tag dist/actor-app.zip dist/actor-update.json --repo $env:GITHUB_REPOSITORY --title "Fundi Voice Actor $version" --notes "Signed Actor desktop update $version" --latest
+          gh release create $tag dist/actor-app.zip dist/actor-update.json "dist/FundiVoiceActor-Launcher-Setup-$version.exe" --repo $env:GITHUB_REPOSITORY --title "Fundi Voice Actor $version" --notes "Signed Actor desktop update $version" --latest
           if($LASTEXITCODE -ne 0){throw 'GitHub Release creation failed'}
       - name: Keep CI artifact for diagnostics
         if: github.event_name != 'pull_request'
@@ -76,5 +79,6 @@ jobs:
           path: |
             dist/actor-app.zip
             dist/actor-update.json
+            dist/FundiVoiceActor-Launcher-Setup-*.exe
           retention-days: 30
 
