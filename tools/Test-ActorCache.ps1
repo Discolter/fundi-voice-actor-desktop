@@ -7,7 +7,7 @@ $type = $assembly.GetType('FundiVoice.ActorCloud', $true)
 $flags = [Reflection.BindingFlags]::Instance -bor [Reflection.BindingFlags]::NonPublic
 $directory = Join-Path ([IO.Path]::GetTempPath()) ('fv-cache-' + [Guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($directory) | Out-Null
-$actor = [Activator]::CreateInstance($type, [object[]]@($directory))
+$actor = $type.GetConstructor([type[]]@([string])).Invoke([object[]]@([string]$directory))
 $type.GetField('timer', $flags).GetValue($actor).Dispose()
 function Set-Field($name, $value) { $type.GetField($name, $flags).SetValue($actor, $value) }
 function Seed-Account {
@@ -23,7 +23,7 @@ function Seed-Account {
     Set-Field 'vacationData' ([pscustomobject]@{current='previous_actor_vacation'})
     $jobs = $type.GetField('transfers', $flags).GetValue($actor)
     $jobType = $assembly.GetType('FundiVoice.Desktop.TransferJob', $true)
-    $job = [Activator]::CreateInstance($jobType, [object[]]@('upload','previous_actor_recording.wav',[long]1,'old_role'))
+    $job = $jobType.GetConstructor([type[]]@([string],[string],[long],[string])).Invoke([object[]]@('upload','previous_actor_recording.wav',[long]1,'old_role'))
     $job.Finish()
     $jobs.GetType().GetField('current', $flags).SetValue($jobs, $job)
 }
