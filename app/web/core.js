@@ -13,8 +13,12 @@ export const stageLabel=status=>STAGES.find(x=>x[0]===status)?.[1]||'Стату�
 export function reviewedRole(role,reviews=[],pending=[]){
   const review=reviews.find(item=>item.roleId===role.roleId)||null;
   const queued=pending.some(item=>item.operation==='submit'&&item.body?.roleId===role.roleId);
-  const status=queued?'received':review?.state==='pending'?'received':review?.state==='accepted'?'done':role.status==='recording'?'recording':review?.state==='retake'?'retake':role.status==='processed'?'processing':role.status;
-  return {...role,status,review,queued,reviewLabel:queued?'Ожидает отправки':review?.state==='pending'?'На проверке':stageLabel(status)};
+  const stage=role.status==='processed'?'processing':role.status;
+  const status=queued?'received':review?.state==='accepted'?'done':
+    review?.state==='pending'?(stage==='processing'?'processing':'received'):
+    role.status==='recording'?'recording':review?.state==='retake'?'retake':stage;
+  return {...role,status,review,queued,reviewLabel:queued?'Ожидает отправки':
+    status==='received'&&review?.state==='pending'?'На проверке':stageLabel(status)};
 }
 export const matches=(role,query)=>query.trim().toLocaleLowerCase('ru').split(/\s+/).every(part=>[role.projectTitle,role.character,role.episodeNumber,role.episodeTitle].join(' ').toLocaleLowerCase('ru').includes(part));
 export function selectDebts(roles,{query='',filter='all'}={}){
@@ -104,3 +108,4 @@ export function visibleAcceptedRoles(roles,hiddenRoleIds){
   // A reopened role must become visible even if it was previously archived.
   return (roles||[]).filter(role=>role.status!=='done'||!hidden.has(role.roleId));
 }
+

@@ -30,7 +30,7 @@ namespace FundiVoice {
                 object view;session.TryGetValue("view",out view);
                 return new{authenticated=Authenticated(),server=JsonData.S(session,"server"),username=JsonData.S(session,"username"),
                     lastSync=JsonData.S(session,"lastSync"),busy=busy,error=error,view=view,mailbox=mailbox.View(),
-                    fileApiAvailable=fileApiAvailable,files=recordingFiles,usedBytes=usedBytes,quotaBytes=quotaBytes,fileError=fileError,transfer=transfers.View(),vacation=vacationData, vacationError=vacationError,vacationApiAvailable=vacationApiAvailable};
+                    fileApiAvailable=fileApiAvailable,files=recordingFiles,usedBytes=usedBytes,quotaBytes=quotaBytes,fileError=fileError,transfer=Authenticated()?transfers.View():null,vacation=vacationData, vacationError=vacationError,vacationApiAvailable=vacationApiAvailable};
             }
         }
         public object Login(Dictionary<string,object> data,bool activate){
@@ -49,6 +49,7 @@ namespace FundiVoice {
                 }else body=new{username=username,password=password};
                 var response=CloudHttp.Request(server,activate?"/v1/actor/activate":"/v1/actor/login","POST",body,null);
                 lock(gate){
+                    ClearAccountCache();
                     session=new Dictionary<string,object>{{"server",server},{"accessToken",JsonData.S(response,"accessToken")},
                         {"refreshToken",JsonData.S(response,"refreshToken")},{"accessExpiresAt",JsonData.S(response,"accessExpiresAt")},
                         {"username",JsonData.S(response,"username")},{"lastSync",""}};
@@ -110,7 +111,7 @@ namespace FundiVoice {
             string server,refresh;
             lock(syncGate)lock(gate){
                 if(transfers.Busy)throw new CloudFault(409,"transfer_busy","Сначала заверши или отмени загрузку записи.");
-                recordingFiles=new object[0];usedBytes=0;fileApiAvailable=false;fileError="";ClearVacation();
+                ClearAccountCache();
                 server=JsonData.S(session,"server");refresh=JsonData.S(session,"refreshToken");
                 session=new Dictionary<string,object>();File.Delete(sessionFile);mailbox.Clear();error="";
             }
@@ -179,7 +180,10 @@ namespace FundiVoice {
             catch(CloudFault problem){
                 lock(gate){
                     error=problem.Message;
-                    if(problem.Status==401||problem.Status==403){session=new Dictionary<string,object>();try{File.Delete(sessionFile);mailbox.Clear();}catch{}}
+                    if(problem.Status==401||problem.Status==403){
+                        transfers.Cancel();session=new Dictionary<string,object>();ClearAccountCache();
+                        try{File.Delete(sessionFile);mailbox.Clear();}catch{}
+                    }
                 }
             }
             catch{lock(gate)error="Не удалось обновить роли. Показаны последние сохранённые назначения.";}
@@ -228,3 +232,4 @@ namespace FundiVoice {
         public void Dispose(){if(timer!=null)timer.Dispose();transfers.Dispose();}
     }
 }
+

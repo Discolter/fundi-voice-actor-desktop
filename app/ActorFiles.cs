@@ -14,6 +14,12 @@ namespace FundiVoice {
         long usedBytes,quotaBytes=9L*1024*1024*1024;
         bool fileApiAvailable;
         string fileError="";
+        // File lists and finished transfers belong to one account, including when
+        // the next user's file refresh fails. Never show a previous actor's cache.
+        void ClearAccountCache(){
+            recordingFiles=new object[0];usedBytes=0;quotaBytes=9L*1024*1024*1024;
+            fileApiAvailable=false;fileError="";transfers.ClearCompleted();ClearVacation();
+        }
         void RotateAccess(){
             string server,refresh;
             lock(gate){server=JsonData.S(session,"server");refresh=JsonData.S(session,"refreshToken");}
@@ -149,3 +155,4 @@ namespace FundiVoice {
         public object CancelTransfer(){transfers.Cancel();return Status();}
     }
 }
+
