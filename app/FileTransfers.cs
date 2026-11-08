@@ -30,6 +30,7 @@ namespace FundiVoice.Desktop {
             });
         }
         public void Cancel(){lock(gate){if(current!=null)current.Cancel();}}
+        public void ClearCompleted(){lock(gate){if(current!=null&&!current.Busy)current=null;}}
         public void Dispose(){Cancel();}
     }
     public sealed class TransferJob {
@@ -193,3 +194,4 @@ namespace FundiVoice.Desktop {
         }
     }
 }
+
