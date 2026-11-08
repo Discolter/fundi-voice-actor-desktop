@@ -115,3 +115,16 @@ func TestSignedZipHashPathUnauthenticated(t *testing.T) {
 		t.Fatal("Unsigned artifact accepted")
 	}
 }
+
+
+func TestVerifiedCacheMarkerIncludesWriterNewline(t *testing.T) {
+ root := t.TempDir()
+ dir := filepath.Join(root, "versions", "0.4.26")
+ if err := os.MkdirAll(dir, 0755); err != nil { t.Fatal(err) }
+ hash := "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+ for _, ending := range []string{"\n", "\r\n"} {
+  if err := os.WriteFile(filepath.Join(dir, ".verified-sha256"), []byte(hash+ending), 0600); err != nil { t.Fatal(err) }
+  if !isPreviouslyVerified(root, "0.4.26", hash) { t.Fatal("The updater rejected its own saved hash marker") }
+ }
+ if isPreviouslyVerified(root, "0.4.26", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff") { t.Fatal("Mismatched package accepted") }
+}

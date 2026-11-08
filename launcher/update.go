@@ -270,8 +270,12 @@ func writeCurrentVersion(root, version string) error {
 	return nil
 }
 func isPreviouslyVerified(root, version, hash string) bool {
-	got := strings.TrimSpace(readSmallFile(filepath.Join(root, "versions", version, ".verified-sha256")))
-	return len(got) == 64 && strings.EqualFold(got, hash)
+ raw, err := os.ReadFile(filepath.Join(root, "versions", version, ".verified-sha256"))
+ // The writer appends a newline: a valid 64-character hash needs 65 bytes
+ // (66 with CRLF), unlike the bounded version-name files.
+ if err != nil || len(raw) > 66 { return false }
+ got := strings.TrimSpace(string(raw))
+ return len(got) == 64 && strings.EqualFold(got, hash)
 }
 func installDownloaded(root string, m Manifest, client *http.Client) error {
 	if err := verifyManifest(m); err != nil {
@@ -399,3 +403,4 @@ func pruneVersions(root, current string) error {
 	}
 	return nil
 }
+
