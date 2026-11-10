@@ -1,8 +1,8 @@
-export const STAGES=[['waiting','Жду запись'],['recording','В записи'],['received','Получено'],['processing','Обрабатываю'],['retake','На перезапись'],['done','Принято']];
+export const STAGES=[['waiting','Жду запись'],['recording','В записи'],['received','Получено'],['processing','Обрабатываю'],['retake','На перезапись'],['pickup','Дописать'],['done','Принято']];
 export const THEMES=[['slate','Серый'],['graphite','Графит'],['silver','Серебро'],['forest','Лесной'],['plum','Сливовый'],['ocean','Океан'],['aurora','Fundi Original'],['midnight','Полночь'],['gold','Золотой час'],['light','Светлая'],['sunset','Закат'],['mintwave','Мятный градиент'],['twilight','Сумерки'],['rose','Розовый градиент'],['living-sunset','Живой сине-оранжевый'],['living-aurora','Живое сияние'],['living-ocean','Живой океан'],['living-plum','Живая плазма']];
 export const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
-export const isDebt=role=>role.status==='waiting'||role.status==='retake';
+export const isDebt=role=>['waiting','retake','pickup'].includes(role.status);
 // Traffic-light workload for actor roles; null/unknown never becomes zero.
 export function actorWorkloadClass(lines){
   if(!Number.isInteger(lines)||lines<0)return 'line-workload-unknown';
@@ -16,7 +16,7 @@ export function reviewedRole(role,reviews=[],pending=[]){
   const stage=role.status==='processed'?'processing':role.status;
   const status=queued?'received':review?.state==='accepted'?'done':
     review?.state==='pending'?(stage==='processing'?'processing':'received'):
-    role.status==='recording'?'recording':review?.state==='retake'?'retake':stage;
+    role.status==='recording'?'recording':review?.state==='retake'?'retake':review?.state==='pickup'?'pickup':stage;
   return {...role,status,review,queued,reviewLabel:queued?'Ожидает отправки':
     status==='received'&&review?.state==='pending'?'На проверке':stageLabel(status)};
 }
@@ -50,9 +50,11 @@ export const KIND_LABELS = Object.freeze({
   status_processing:'Работа в обработке',
   status_processed:'Обрабатываю',
   status_retake:'На перезапись',
+  status_pickup:'Нужно дописать реплики',
   status_done:'Работа принята',
   file_downloaded:'Руководитель скачал запись',
   retake:'На перезапись',
+  pickup:'Дописать',
   accepted:'Запись принята',
   note:'Замечание от руководителя'
 });
