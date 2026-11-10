@@ -201,6 +201,8 @@ namespace FundiVoice {
                 case "status_received":return "Запись получена";
                 case "status_processing":return "Работа в обработке";
                 case "status_processed":return "Обработка завершена";
+                case "status_pickup":return "Нужно дописать реплики";
+                case "pickup":return "Дописать";
                 case "status_retake":return "Нужна перезапись";
                 case "status_done":return "Работа принята";
                 case "file_downloaded":return "Руководитель скачал запись";

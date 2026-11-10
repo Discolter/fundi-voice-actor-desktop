@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {reviewedRole,isDebt,selectDebts,stageLabel,messageKind,visibleAcceptedRoles} from '../app/web/core.js';
+const role={roleId:'r',projectId:'p',projectTitle:'Проект',character:'Герой',status:'done'};
+const reviews=[{roleId:'r',state:'pickup',messageKind:'pickup',messageText:'Дописать реплики 12–15'}];
+const reopened=reviewedRole(role,reviews);
+assert.equal(reopened.status,'pickup');
+assert.equal(stageLabel(reopened.status),'Дописать');
+assert.equal(isDebt(reopened),true);
+assert.equal(selectDebts([reopened],{filter:'pickup'}).length,1);
+assert.equal(selectDebts([reopened],{filter:'retake'}).length,0);
+assert.equal(visibleAcceptedRoles([reopened],['r']).length,1,'Reopened work must return from hidden history');
+assert.equal(reviewedRole({...role,status:'recording'},reviews).status,'recording');
+assert.equal(reviewedRole(reopened,reviews,[{operation:'submit',body:{roleId:'r'}}]).status,'received');
+assert.equal(reviewedRole(reopened,[{roleId:'r',state:'pending'}]).status,'received');
+assert.equal(messageKind('pickup'),'Дописать');
+assert.equal(messageKind('status_pickup'),'Нужно дописать реплики');
+console.log('PASS: Actor pickup feedback, filtered debt, hidden history, recording and submission');

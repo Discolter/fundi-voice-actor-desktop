@@ -1,7 +1,7 @@
 // Shared, dependency-free read-only Studio layout for Actor Web and Actor Desktop.
 // Rendering never accepts owner routes, task lists, local file paths or write actions.
 const stageNames={unset:'Этап не указан',prep:'Подготовка',record:'Запись',edit:'Монтаж',mix:'Сведение',review:'Проверка',done:'Готово'};
-const roleNames={waiting:'Жду запись',recording:'В записи',received:'Получено',processing:'Обрабатываю',processed:'Обрабатываю',retake:'На перезапись',done:'Принято'};
+const roleNames={waiting:'Жду запись',recording:'В записи',received:'Получено',processing:'Обрабатываю',processed:'Обрабатываю',retake:'На перезапись',pickup:'Дописать',done:'Принято'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeImg=s=>typeof s==='string'&&s.length<250000&&/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(s)?s:'';
 const nameKey=s=>String(s||'').toLocaleLowerCase('ru-RU');
@@ -67,7 +67,7 @@ function roleRow(role){
  const rawStage=Object.prototype.hasOwnProperty.call(roleNames,role.status)?role.status:'unknown';
  const status=roleNames[role.status]||'Этап не указан';
  const ageMarkup=age(role.createdAt);
- return '<div class="fv-mirror-role '+(rawStage==='done'?'accepted':rawStage==='retake'?'retake':'')+'">'+
+ return '<div class="fv-mirror-role '+(rawStage==='done'?'accepted':rawStage==='retake'?'retake':rawStage==='pickup'?'pickup':'')+'">'+
    '<div class="fv-mirror-character">'+poster(role.image,role.character)+
     '<div><strong>'+esc(role.character||'Без имени')+'</strong><div><span class="fv-mirror-tier-badge fv-mirror-tier-'+fvTier(role.roleTier)+'">'+esc(fvTierLabel(role.roleTier))+'</span></div><div class="fv-mirror-role-meta">'+
     (Number.isInteger(role.lineCount)?'<span class="fv-mirror-lines">'+role.lineCount+' репл.</span>':'')+
