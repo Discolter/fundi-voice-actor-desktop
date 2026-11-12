@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -22,7 +23,7 @@ namespace FundiVoice {
         static readonly ManualResetEvent serverReady=new ManualResetEvent(false);
         static readonly string instanceId=Guid.NewGuid().ToString("N");
         static readonly HashSet<string> files=new HashSet<string>(StringComparer.Ordinal){
-            "/","/index.html","/app.js","/core.js","/age.js", "/file-tools.js", "/file-tools.css","/actor.css","/themes.css","/animated-themes.css","/file-browser.js","/file-browser.css","/update-notice.js","/update-notice.css","/role-image-viewer.js","/role-image-viewer.css","/studio-projects-view.js","/studio-projects-view.css","/startup-check.js","/brand-mark.png","/favicon.ico","/icon.svg"
+            "/","/index.html","/app.js", "/casting.js", "/casting.css","/core.js","/age.js", "/file-tools.js", "/file-tools.css","/actor.css","/themes.css","/animated-themes.css","/file-browser.js","/file-browser.css","/update-notice.js","/update-notice.css","/role-image-viewer.js","/role-image-viewer.css","/studio-projects-view.js","/studio-projects-view.css","/startup-check.js","/brand-mark.png","/favicon.ico","/icon.svg"
         };
         public static void Run(string directory){
             webRoot=Path.Combine(Path.GetFullPath(directory),"web");
@@ -132,11 +133,14 @@ namespace FundiVoice {
                                 (headers.TryGetValue("Origin",out found)&&found!=origin)||headers.ContainsKey("Transfer-Encoding")){
                                 Json(stream,403,new{error="Открой Fundi Voice Actor с ярлыка или через FundiVoiceActor.exe."});return;
                             }
+                            var castPart=Regex.Match(path,@"^/api/casting/parts/([0-9a-fA-F-]{36})/([1-9][0-9]{0,3})$");
+                            bool binary=method=="PUT"&&castPart.Success;
                             int length=0;
                             if(headers.ContainsKey("Content-Length")&&!Int32.TryParse(headers["Content-Length"],out length))throw new ArgumentException("Неверный запрос.");
-                            if(length<0||length>16384){Json(stream,413,new{error="Слишком большой запрос."});return;}
+                            if(length<0||length>(binary?8*1024*1024:16384)){Json(stream,413,new{error="Слишком большой запрос."});return;}
                             byte[] body=new byte[length];int read=0;
                             while(read<length){int count=stream.Read(body,read,length-read);if(count==0)throw new IOException();read+=count;}
+                            if(binary){Json(stream,200,cloud.CastingPart(castPart.Groups[1].Value,castPart.Groups[2].Value,body));return;}
                             object value=length==0?null:JsonData.Json().DeserializeObject(Encoding.UTF8.GetString(body));
                             Route(stream,method,path.Substring(5),JsonData.D(value));return;
                         }
@@ -262,6 +266,7 @@ namespace FundiVoice {
             if(route=="vacation/start"){Json(stream,200,cloud.StartVacation(body));return;}
             if(route=="vacation/update"){Json(stream,200,cloud.UpdateVacation(body));return;}
             if(route=="vacation/end"){Json(stream,200,cloud.EndVacation());return;}
+            if(route=="casting"){Json(stream,200,cloud.Casting(body));return;}
             if(route=="files/refresh"){Json(stream,200,cloud.FilesNow());return;}
             if(route=="file-browser"){Json(stream,200,LocalBrowse(body,false));return;}
             if(route=="files/upload"){

@@ -46,6 +46,21 @@ namespace FundiVoice {
                 }
             }
         }
+        public object Casting(Dictionary<string,object> body){
+            string action=JsonData.S(body,"action"),path;
+            if(action=="")path="/v1/actor/casting";
+            else if(action=="files/begin"||action=="files/download")path="/v1/actor/casting/"+action;
+            else if(action=="multipart/begin"||action=="multipart/complete")path="/v1/actor/files/"+action;
+            else if(action=="files/delete")path="/v1/actor/files/delete";
+            else throw new CloudFault(400,"invalid_casting_action","Неизвестное действие кастинга.");
+            return FileRequest(path,action==""?"GET":"POST",action==""?null:JsonData.D(body.ContainsKey("data")?body["data"]:null));
+        }
+        public object CastingPart(string fileId,string part,byte[] bytes){
+            Guid id;int number;
+            if(!Guid.TryParseExact(fileId,"D",out id)||!Int32.TryParse(part,out number)||number<1||number>1152||bytes.Length<1||bytes.Length>8*1024*1024)
+                throw new CloudFault(400,"invalid_part","Неверная часть пробы.");
+            return FileRequest("/v1/actor/files/"+id.ToString("D")+"/parts/"+number.ToString(CultureInfo.InvariantCulture),"PUT",bytes);
+        }
         void RefreshFiles(bool required){
             try{
                 var response=FileRequest("/v1/actor/files","GET",null);
