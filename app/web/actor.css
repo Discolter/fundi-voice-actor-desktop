@@ -147,3 +147,28 @@ body[data-theme="light"] .fv-age-red{color:#a92e43;background:#ffe5e9}
 .role-feedback[data-kind=pickup],.notification-item[data-kind=pickup],.notification-item[data-kind=status_pickup]{border-left:3px solid #71d9d2}
 body[data-theme=light] .stage-pickup{--stage:#147572}
 .role-stage.stage-pickup::before{content:"";display:inline-block;width:1em;height:1em;margin-right:.4em;vertical-align:-.12em;background:currentColor;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m16 3 5 5-12 12-6 1 1-6Z M14 5l5 5 M3 21h18'/%3E%3C/svg%3E") center/contain no-repeat}
+
+/* Fundi Voice Studio icon parity + per-destination navigation accents. */
+.actor-sidebar nav .nav-item{--fv-nav:126,164,204;transition:background-color .17s ease,border-color .17s ease,color .17s ease,box-shadow .17s ease;}
+.actor-sidebar nav .nav-item[data-page="projects"]{--fv-nav:49,203,137;}
+.actor-sidebar nav .nav-item[data-page="studioProjects"]{--fv-nav:69,141,250;}
+.actor-sidebar nav .nav-item[data-page="debts"]{--fv-nav:245,95,111;}
+.actor-sidebar nav .nav-item[data-page="history"]{--fv-nav:231,175,85;}
+.actor-sidebar nav .nav-item[data-action="recordings"]{--fv-nav:71,204,205;}
+.actor-sidebar nav .nav-item[data-page="casting"]{--fv-nav:181,142,250;}
+.actor-sidebar nav .nav-item:is(:hover,:focus-visible,.active){
+ background:rgba(var(--fv-nav),.15);border-color:rgba(var(--fv-nav),.48);color:var(--text);
+ box-shadow:inset 3px 0 0 rgba(var(--fv-nav),.84),0 0 0 1px rgba(var(--fv-nav),.08);
+}
+.actor-sidebar nav .nav-item:is(:hover,:focus-visible,.active) svg{stroke:rgb(var(--fv-nav));}
+.actor-sidebar nav .nav-item:focus-visible{outline:2px solid rgba(var(--fv-nav),.85);outline-offset:2px;}
+.actor-sidebar nav .nav-item[data-page="debts"].needs-attention:not(:hover):not(:focus-visible){
+ border-color:rgba(245,95,111,.36);box-shadow:inset 3px 0 0 rgba(245,95,111,.68);
+}
+.actor-sidebar nav .nav-item[data-page="debts"].needs-attention b{color:#ffc4cb;}
+/* Only active corrections glow; ordinary 'waiting' debts remain unhighlighted. */
+.actor-content .debts-list .actor-role[data-status="retake"],
+.actor-content .debts-list .actor-role[data-status="pickup"]{
+ border-color:rgba(245,95,111,.64);box-shadow:0 0 0 1px rgba(245,95,111,.18),0 0 18px rgba(245,95,111,.12);
+}
+@media(prefers-reduced-motion:reduce){.actor-sidebar nav .nav-item{transition:none;}}
