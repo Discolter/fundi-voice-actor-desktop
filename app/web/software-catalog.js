@@ -6,10 +6,10 @@ const node=(p,tag,cls='',text='')=>{const el=document.createElement(tag);el.clas
 function button(p,text,fn,primary=false){const b=node(p,'button','fv-soft-btn'+(primary?' fv-soft-primary':''),text);b.type='button';b.onclick=fn;return b;}
 function safeUrl(value,storage=false){try{const u=new URL(value);if(u.protocol!=='https:'||u.username||u.password)return null;if(storage&&(!/^[a-f0-9]{32}\.(?:eu\.)?r2\.cloudflarestorage\.com$/i.test(u.hostname)||!u.searchParams.has('X-Amz-Signature')))return null;return u;}catch{return null;}}
 export function createSoftwareCatalog({owner=false,identity,request}){
- let root=null,model=null,key='',generation=0,loading=false,busy=false,err='',editId='',draft=null,filter='all',category='all',query='',xhr=null;
+ let root=null,model=null,loadedAt=0,key='',generation=0,loading=false,busy=false,err='',editId='',draft=null,filter='all',category='all',query='',xhr=null;
  const alive=g=>g===generation&&identity()===key&&Boolean(key);
- function reset(){generation++;xhr?.abort();xhr=null;root=null;model=null;key='';loading=busy=false;err=editId=query='';draft=null;filter=category='all';}
- async function reload(){const g=generation;loading=true;err='';render();try{const next=await request('');if(alive(g))model=next;}catch(e){if(alive(g))err=e.message;}finally{if(alive(g)){loading=false;render();}}}
+ function reset(){generation++;xhr?.abort();xhr=null;root=null;model=null;loadedAt=0;key='';loading=busy=false;err=editId=query='';draft=null;filter=category='all';}
+ async function reload(){const g=generation;loading=true;err='';render();try{const next=await request('');if(alive(g)){model=next;loadedAt=Date.now();}}catch(e){if(alive(g))err=e.message;}finally{if(alive(g)){loading=false;render();}}}
  async function action(fn){if(busy||loading)return;const g=generation;busy=true;err='';render();try{await fn(g);}catch(e){if(alive(g))err=e.message||'Операция не выполнена.';}finally{if(alive(g)){busy=false;render();}}}
  const current=()=>model?.cards?.find(x=>x.id===editId);
  async function save(g){if(!draft.name.trim()||!draft.version.trim())throw Error('Укажи название и версию.');await request('save',{id:editId,revision:current()?.revision||0,content:draft});if(!alive(g))throw Error('Сеанс завершён.');const next=await request('');if(!alive(g))throw Error('Сеанс завершён.');model=next;}
@@ -18,8 +18,18 @@ export function createSoftwareCatalog({owner=false,identity,request}){
  function select(p,label,options,value,change){const wrap=node(p,'label','fv-soft-field',label),el=node(wrap,'select');for(const [k,v]of options){const o=node(el,'option','',v);o.value=k;}el.value=value;el.onchange=()=>change(el.value);el.disabled=busy;return el;}
  function check(p,label,checked,onChange,disabled=false){const wrap=node(p,'label','fv-soft-check'),el=node(wrap,'input');el.type='checkbox';el.checked=checked;el.disabled=busy||disabled;el.onchange=()=>onChange(el.checked);node(wrap,'span','',label);}
  function gallery(p,assets,c){const images=(c.imageIds||[]).map(id=>assets.find(x=>x.id===id)).filter(a=>a&&safeUrl(a.previewUrl,true));if(!images.length)return;const grid=node(p,'div','fv-soft-gallery');for(const a of images){const img=node(grid,'img');img.src=a.previewUrl;img.alt=a.fileName;img.loading='lazy';img.referrerPolicy='no-referrer';}}
- function upload(url,file,progress){const u=safeUrl(url,true);if(!u)throw Error('Некорректная ссылка R2.');
-   return new Promise((resolve,reject)=>{const req=new XMLHttpRequest();xhr=req;req.open('PUT',u.href);req.upload.onprogress=e=>{if(e.lengthComputable)progress(Math.round(100*e.loaded/e.total));};req.onload=()=>req.status>=200&&req.status<300?resolve():reject(Error('R2: HTTP '+req.status));req.onerror=()=>reject(Error('R2 недоступен. Проверь сеть и CORS хранилища.'));req.onabort=()=>reject(Error('Загрузка отменена.'));req.onloadend=()=>{if(xhr===req)xhr=null;};req.send(file);});}
+ async function upload(receipt,file,progress,g){
+   const partSize=receipt.partSize;
+   if(!Number.isSafeInteger(partSize)||partSize<1||partSize>5*1024*1024)throw Error('Неверный размер части.');
+   for(let offset=0,number=1;offset<file.size;offset+=partSize,number++){
+     if(!alive(g))throw Error('Сеанс завершён.');
+     const bytes=new Uint8Array(await file.slice(offset,offset+partSize).arrayBuffer());
+     let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));
+     if(!alive(g))throw Error('Сеанс завершён.');
+     await request('assets/part',{assetId:receipt.assetId,number,base64:btoa(binary)});
+     progress(Math.round(100*Math.min(offset+partSize,file.size)/file.size));
+   }
+ }
  function editor(p){const box=node(p,'section','fv-soft-panel');node(box,'h2','',current()?'Редактирование ПО':'Новое ПО');const grid=node(box,'div','fv-soft-grid');
    field(grid,'name','Название');field(grid,'version','Версия');
    select(grid,'Категория',Object.entries(categories),draft.category,v=>draft.category=v);
@@ -33,7 +43,7 @@ export function createSoftwareCatalog({owner=false,identity,request}){
    }
    gallery(box,assets,draft);
    for(const kind of ['file','image']){const drop=node(box,'label','fv-soft-drop',kind==='file'?'Перетащи файл программы или выбери его':'Перетащи иконку / скриншот или выбери изображение'),input=node(drop,'input');input.type='file';input.disabled=busy;if(kind==='image')input.accept='.png,.jpg,.jpeg,.webp';
-     const start=file=>{if(!file||busy)return;void action(async g=>{await save(g);const receipt=await request('assets/begin',{cardId:editId,kind,fileName:file.name,size:file.size});if(!alive(g))return;await upload(receipt.uploadUrl,file,pct=>{const el=root?.querySelector('.fv-soft-progress');if(el)el.textContent='Загрузка: '+pct+'%';});if(!alive(g))return;await request('assets/complete',{assetId:receipt.assetId});(kind==='image'?draft.imageIds:draft.fileIds).push(receipt.assetId);await save(g);});};
+     const start=file=>{if(!file||busy)return;void action(async g=>{await save(g);const receipt=await request('assets/begin',{cardId:editId,kind,fileName:file.name,size:file.size});if(!alive(g))return;await upload(receipt,file,pct=>{const el=root?.querySelector('.fv-soft-progress');if(el)el.textContent='Загрузка: '+pct+'%';},g);if(!alive(g))return;await request('assets/complete',{assetId:receipt.assetId});(kind==='image'?draft.imageIds:draft.fileIds).push(receipt.assetId);await save(g);});};
      input.onchange=()=>start(input.files?.[0]);drop.ondragover=e=>e.preventDefault();drop.ondrop=e=>{e.preventDefault();start(e.dataTransfer?.files?.[0]);};}
    if(busy)node(box,'p','fv-soft-progress','Выполняется операция…');
    const bar=node(box,'div','fv-soft-actions');
@@ -71,5 +81,5 @@ export function createSoftwareCatalog({owner=false,identity,request}){
    select(controls,'Категория',[['all','Все категории'],...Object.entries(categories)],category,v=>{category=v;populate();});
    select(controls,'Фильтр',[['all','Все программы'],['required','Обязательные'],['recommended','Рекомендуемые'],['own','Наши разработки'],...(owner?[['draft','Черновики'],['published','Опубликованные']]:[])],filter,v=>{filter=v;populate();});populate();
  }
- return {mount(el){if(!el)return;const user=identity();if(user!==key){reset();key=user;}root=el;render();if(key&&!model&&!loading&&!err)void reload();},reset,get busy(){return busy||loading;}};
+ return {mount(el){if(!el)return;const user=identity();if(user!==key){reset();key=user;}root=el;render();if(key&&!draft&&!busy&&!loading&&!err&&(!model||Date.now()-loadedAt>120000))void reload();},reset,get busy(){return busy||loading;}};
 }
