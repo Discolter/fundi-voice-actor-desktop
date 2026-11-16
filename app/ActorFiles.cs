@@ -46,6 +46,11 @@ namespace FundiVoice {
                 }
             }
         }
+        public object Software(Dictionary<string,object> body){
+            string action=JsonData.S(body,"action");
+            if(action!=""&&action!="access")throw new CloudFault(400,"invalid_software_action","Неизвестное действие каталога ПО.");
+            return FileRequest("/v1/actor/software"+(action==""?"":"/"+action),action==""?"GET":"POST",action==""?null:JsonData.D(body.ContainsKey("data")?body["data"]:null));
+        }
         public object Casting(Dictionary<string,object> body){
             string action=JsonData.S(body,"action"),path;
             if(action=="")path="/v1/actor/casting";

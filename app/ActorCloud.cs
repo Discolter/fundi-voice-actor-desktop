@@ -192,6 +192,7 @@ namespace FundiVoice {
         // Used by Windows tray balloon notifications. Matches the web inbox labels.
         static string ActivityTitle(string kind){
             switch(kind){
+                case "software_updated":return "Обновление студийного ПО";
                 case "role_assigned":return "Новая роль";
                 case "role_removed":return "Роль снята";
                 case "role_changed":return "Изменение назначения";
