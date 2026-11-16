@@ -40,6 +40,7 @@ export function groupProjects(roles,query=''){
 export const KIND_LABELS = Object.freeze({
   role_archived:'Роль в истории',
   role_restored:'Роль возвращена',
+  software_updated:'Обновление студийного ПО',
   role_assigned:'Новая роль',
   role_removed:'Роль снята',
   role_changed:'Изменения в роли',

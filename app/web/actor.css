@@ -172,3 +172,5 @@ body[data-theme=light] .stage-pickup{--stage:#147572}
  border-color:rgba(245,95,111,.64);box-shadow:0 0 0 1px rgba(245,95,111,.18),0 0 18px rgba(245,95,111,.12);
 }
 @media(prefers-reduced-motion:reduce){.actor-sidebar nav .nav-item{transition:none;}}
+
+.actor-sidebar nav .nav-item[data-page="software"]{--fv-nav:115,165,250;}
