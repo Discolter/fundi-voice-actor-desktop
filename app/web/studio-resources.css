@@ -20,6 +20,16 @@
   color:inherit; font:inherit; border:1px solid color-mix(in srgb,currentColor 25%,transparent);
   border-radius:8px; padding:8px 11px; background:color-mix(in srgb,currentColor 7%,transparent);
 }
+.fvr-software .fvr-card, .fvr-software > input[type="search"], .fvr-catalog-filters select {
+  background:var(--surface, var(--panel, Canvas)); border-color:var(--border, var(--stroke, var(--line, ButtonBorder)));
+}
+.fv-resources > input[type="search"]::placeholder { color:var(--muted, currentColor); opacity:1; }
+.fv-resources :is(input[type="search"], .fvr-catalog-filters select):focus {
+  border-color:var(--brand1, var(--accent, var(--brand, Highlight)));
+}
+.fvr-catalog-filters select { width:auto; max-width:100%; }
+.fvr-software-card h2 { overflow-wrap:anywhere; }
+.fvr-software-status { margin-inline-end:auto; overflow-wrap:anywhere; }
 .fvr-button { display:inline-block; text-decoration:none; cursor:pointer; overflow-wrap:anywhere; }
 .fvr-button:hover { background:color-mix(in srgb,currentColor 16%,transparent); }
 .fvr-button:disabled { opacity:.55; cursor:wait; }
