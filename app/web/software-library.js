@@ -19,11 +19,51 @@ export function action(parent, label, run, primary = false) {
   return button;
 }
 
-export function softwareCard(parent, details, {label, open}) {
+export function createSoftwareIconLoader(resolveUrl) {
+  const tickets = new Map();
+  return {
+    url(id) {
+      const saved = tickets.get(id);
+      if (saved && saved.expires > Date.now() + 10000) return saved.promise;
+      const ticket = {expires: Infinity};
+      ticket.promise = Promise.resolve().then(() => resolveUrl(id)).then(url => {
+        const expires = Number(new URL(url, location.href).searchParams.get('expires'));
+        ticket.expires = expires > 0 ? expires * 1000 : Date.now();
+        return url;
+      }).catch(error => {
+        if (tickets.get(id) === ticket) tickets.delete(id);
+        throw error;
+      });
+      tickets.set(id, ticket);
+      return ticket.promise;
+    },
+    forget: id => tickets.delete(id),
+    reset: () => tickets.clear()
+  };
+}
+
+export function softwareIcon(parent, fileId, icons) {
+  if (!fileId || !icons) return;
+  const frame = element(parent, 'span', 'fvr-software-icon');
+  const image = element(frame, 'img');
+  image.alt = '';
+  image.loading = 'lazy';
+  image.decoding = 'async';
+  image.addEventListener('error', () => {
+    icons.forget(fileId);
+    frame.remove();
+  }, {once: true});
+  icons.url(fileId).then(url => { image.src = url; }).catch(() => frame.remove());
+}
+
+export function softwareCard(parent, details, {label, open, icons}) {
   const card = element(parent, 'article', 'fvr-card fvr-software-card');
-  element(card, 'h2', '', details.name);
+  const heading = element(card, 'div', 'fvr-software-heading');
+  softwareIcon(heading, details.iconFileId, icons);
+  const copy = element(heading, 'div', 'fvr-software-heading-copy');
+  element(copy, 'h2', '', details.name);
   const metadata = [details.category, details.platform, details.version].filter(Boolean);
-  if (metadata.length) element(card, 'p', 'fvr-muted', metadata.join(' · '));
+  if (metadata.length) element(copy, 'p', 'fvr-muted', metadata.join(' · '));
   if (details.description) element(card, 'p', 'fvr-preview', details.description);
   const actions = element(card, 'div', 'fvr-actions');
   if (label) element(actions, 'span', 'fvr-badge fvr-software-status', label);
@@ -127,6 +167,7 @@ function softwareDetails(parent, item, resolveUrl, reportError) {
 }
 
 export function createSoftwareLibrary({identity, load, resolveUrl}) {
+  const icons = createSoftwareIconLoader(resolveUrl);
   let panel = null;
   let owner = null;
   let sequence = 0;
@@ -141,6 +182,7 @@ export function createSoftwareLibrary({identity, load, resolveUrl}) {
 
   function reset() {
     ++sequence;
+    icons.reset();
     panel = null;
     owner = null;
     items = [];
@@ -193,6 +235,7 @@ export function createSoftwareLibrary({identity, load, resolveUrl}) {
       for (const entry of filtered) {
         softwareCard(list, entry.published, {
           label: requirements[entry.published.requirement],
+          icons,
           open: () => { selected = entry.id; render(); }
         });
       }
