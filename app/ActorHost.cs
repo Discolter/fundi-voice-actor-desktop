@@ -23,6 +23,7 @@ namespace FundiVoice {
         static readonly ManualResetEvent serverReady=new ManualResetEvent(false);
         static readonly string instanceId=Guid.NewGuid().ToString("N");
         static readonly HashSet<string> files=new HashSet<string>(StringComparer.Ordinal){
+            "/software-library.js", "/studio-resources.css",
             "/","/index.html","/app.js", "/casting.js", "/casting.css","/core.js","/age.js", "/file-tools.js", "/file-tools.css","/actor.css","/themes.css","/animated-themes.css","/file-browser.js","/file-browser.css","/update-notice.js","/update-notice.css","/role-image-viewer.js","/role-image-viewer.css","/studio-projects-view.js","/studio-projects-view.css","/startup-check.js","/brand-mark.png","/favicon.ico","/icon.svg"
         };
         public static void Run(string directory){
@@ -144,9 +145,7 @@ namespace FundiVoice {
                             object value=length==0?null:JsonData.Json().DeserializeObject(Encoding.UTF8.GetString(body));
                             Route(stream,method,path.Substring(5),JsonData.D(value));return;
                         }
-                        if(method!="GET"||!(files.Contains(path)||path=="/software-library.js"||path=="/studio-resources.css")){
-                            Json(stream,404,new{error="Не найдено."});return;
-                        }
+                        if(method!="GET"||!files.Contains(path)){Json(stream,404,new{error="Не найдено."});return;}
                         string file=Path.Combine(webRoot,path=="/"?"index.html":path.Substring(1));
                         if(!File.Exists(file)){Json(stream,404,new{error="Файл приложения не найден."});return;}
                         string ext=Path.GetExtension(file);
