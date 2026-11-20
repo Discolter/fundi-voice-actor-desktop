@@ -256,6 +256,7 @@ async function update(manual=false){
   if(changed&&modal.open&&modal.dataset.view==='messages')showMessages();
   if(changed&&(state.authenticated||!document.querySelector('#auth-form input:focus'))&&!modal.open)render();
   if(state.authenticated&&ui.page==='studioProjects'&&(manual||Date.now()-studioCatalogCheckedAt>=60000))await loadStudioCatalog();
+  if(state.authenticated&&ui.page==='software')void software.refresh({quiet:!manual});
 }
 document.addEventListener('click',async event=>{
   const button=event.target.closest('button');if(!button)return;

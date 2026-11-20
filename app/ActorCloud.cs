@@ -208,7 +208,7 @@ namespace FundiVoice {
                 case "status_retake":return "Нужна перезапись";
                 case "status_done":return "Работа принята";
                 case "file_downloaded":return "Руководитель скачал запись";
-                case "software_update":return "Обновление студийного ПО";
+                case "software_update":return "Студийное ПО";
                 case "retake":return "Нужна перезапись";
                 case "accepted":return "Роль принята";
                 case "note":return "Замечание к роли";

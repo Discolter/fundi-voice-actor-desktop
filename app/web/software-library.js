@@ -125,6 +125,8 @@ export function createSoftwareLibrary({identity, load, resolveUrl}) {
   let category = '';
   let requirement = '';
   let initialized = false;
+  let loading = false;
+  let lastAttempt = 0;
 
   function reset() {
     ++sequence;
@@ -133,6 +135,8 @@ export function createSoftwareLibrary({identity, load, resolveUrl}) {
     items = [];
     selected = query = category = requirement = '';
     initialized = false;
+    loading = false;
+    lastAttempt = 0;
   }
 
   function render() {
@@ -140,7 +144,7 @@ export function createSoftwareLibrary({identity, load, resolveUrl}) {
     panel.replaceChildren();
     const toolbar = element(panel, 'div', 'fvr-toolbar');
     element(toolbar, 'h1', '', 'Студийное ПО');
-    action(toolbar, 'Обновить', refresh);
+    action(toolbar, 'Обновить', () => { void refresh(); });
     const status = element(panel, 'p', 'fvr-status');
     status.setAttribute('role', 'status');
     const item = items.find(entry => entry.id === selected);
@@ -191,20 +195,28 @@ export function createSoftwareLibrary({identity, load, resolveUrl}) {
     showResults();
   }
 
-  async function refresh() {
+  async function refresh({quiet = false} = {}) {
+    if (!panel?.isConnected || loading || (quiet && Date.now() - lastAttempt < 30000)) return;
+    if (quiet && panel.contains(document.activeElement) && document.activeElement?.matches('input, select')) return;
     const active = identity();
     const current = ++sequence;
     const status = panel?.querySelector('.fvr-status');
-    if (status) status.textContent = 'Загружаем каталог…';
+    loading = true;
+    lastAttempt = Date.now();
+    if (status && !quiet) status.textContent = 'Загружаем каталог…';
     try {
       const result = await load();
       if (current !== sequence || active !== identity()) return;
-      items = (result.software || []).filter(item => item.published);
+      const next = (result.software || []).filter(item => item.published);
+      const changed = !initialized || JSON.stringify(items) !== JSON.stringify(next);
+      items = next;
       initialized = true;
-      render();
+      if (!quiet || changed) render();
     } catch (error) {
-      if (current === sequence && active === identity() && status)
+      if (current === sequence && active === identity() && status && (!quiet || !initialized))
         status.textContent = error.message || 'Каталог временно недоступен.';
+    } finally {
+      if (current === sequence) loading = false;
     }
   }
 
@@ -219,6 +231,7 @@ export function createSoftwareLibrary({identity, load, resolveUrl}) {
       if (fresh) { render(); void refresh(); }
     },
     open(id) { selected = id; render(); if (panel) void refresh(); },
+    refresh,
     reset
   };
 }
