@@ -19,6 +19,17 @@ export function action(parent, label, run, primary = false) {
   return button;
 }
 
+export function softwareCard(parent, details, {label, open}) {
+  const card = element(parent, 'article', 'fvr-card fvr-software-card');
+  element(card, 'h2', '', details.name);
+  const metadata = [details.category, details.platform, details.version].filter(Boolean);
+  if (metadata.length) element(card, 'p', 'fvr-muted', metadata.join(' · '));
+  if (details.description) element(card, 'p', 'fvr-preview', details.description);
+  const actions = element(card, 'div', 'fvr-actions');
+  if (label) element(actions, 'span', 'fvr-badge fvr-software-status', label);
+  action(actions, 'Открыть', open);
+}
+
 export function selectOptions(select, options, value = '') {
   select.replaceChildren();
   for (const [key, label] of options) element(select, 'option', '', label).value = key;
@@ -155,12 +166,12 @@ export function createSoftwareLibrary({identity, load, resolveUrl}) {
       return;
     }
     if (!initialized) return;
-    const filters = element(panel, 'div', 'fvr-actions');
-    const search = element(filters, 'input');
+    const search = element(panel, 'input');
     search.type = 'search';
     search.value = query;
-    search.placeholder = 'Поиск по каталогу';
+    search.placeholder = 'Найти программу';
     search.setAttribute('aria-label', search.placeholder);
+    const filters = element(panel, 'div', 'fvr-actions fvr-catalog-filters');
     const categories = element(filters, 'select');
     categories.setAttribute('aria-label', 'Категория');
     const allCategories = [...new Set(items.map(entry => entry.published.category).filter(Boolean))].sort();
@@ -176,17 +187,14 @@ export function createSoftwareLibrary({identity, load, resolveUrl}) {
       const filtered = items.filter(({published: p}) =>
         (!requirement || p.requirement === requirement) &&
         (!category || (category === 'in-house' ? p.inHouse : 'category:' + p.category === category)) &&
-        [p.name, p.description, p.category, p.platform].join(' ').toLocaleLowerCase('ru-RU').includes(needle));
+        [p.name, p.description, p.category, p.platform, p.version].join(' ').toLocaleLowerCase('ru-RU').includes(needle));
       if (!filtered.length) element(list, 'p', 'fvr-muted',
         items.length ? 'По заданным фильтрам ничего не найдено.' : 'В каталоге пока нет программ.');
       for (const entry of filtered) {
-        const data = entry.published;
-        const card = element(list, 'article', 'fvr-card');
-        element(card, 'h2', '', data.name);
-        element(card, 'p', 'fvr-muted', [data.version, data.platform, data.category,
-          requirements[data.requirement]].filter(Boolean).join(' · '));
-        if (data.description) element(card, 'p', 'fvr-preview', data.description);
-        action(card, 'Открыть', () => { selected = entry.id; render(); });
+        softwareCard(list, entry.published, {
+          label: requirements[entry.published.requirement],
+          open: () => { selected = entry.id; render(); }
+        });
       }
     }
     search.addEventListener('input', () => { query = search.value; showResults(); });
@@ -226,7 +234,7 @@ export function createSoftwareLibrary({identity, load, resolveUrl}) {
       if (owner !== identity()) reset();
       owner = identity();
       const fresh = !panel;
-      if (fresh) panel = element(null, 'section', 'fv-resources');
+      if (fresh) panel = element(null, 'section', 'fv-resources fvr-software');
       root.replaceChildren(panel);
       if (fresh) { render(); void refresh(); }
     },
