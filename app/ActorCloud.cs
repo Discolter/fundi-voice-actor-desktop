@@ -171,7 +171,9 @@ namespace FundiVoice {
                     object raw;message.TryGetValue("role",out raw);var role=JsonData.D(raw);
                     string kind=JsonData.S(message,"kind"),label=ActivityTitle(kind);
                     string detail=JsonData.S(role,"projectTitle")+" · "+(JsonData.S(role,"episodeNumber")!=""?"Серия "+JsonData.S(role,"episodeNumber")+" · ":"")+JsonData.S(role,"character");
-                    string note=JsonData.S(message,"text");if(note!="")detail+="\n"+note;
+                    string note=JsonData.S(message,"text");
+                    if(kind=="software_update")detail=note;
+                    else if(note!="")detail+="\n"+note;
                     if(detail.Length>220)detail=detail.Substring(0,217)+"…";
                     if(JsonData.N(message,"newCount")>1)detail+="\nЕщё уведомлений: "+(JsonData.N(message,"newCount")-1);
                     NotifyMessage(label,detail);
@@ -206,6 +208,7 @@ namespace FundiVoice {
                 case "status_retake":return "Нужна перезапись";
                 case "status_done":return "Работа принята";
                 case "file_downloaded":return "Руководитель скачал запись";
+                case "software_update":return "Обновление студийного ПО";
                 case "retake":return "Нужна перезапись";
                 case "accepted":return "Роль принята";
                 case "note":return "Замечание к роли";
