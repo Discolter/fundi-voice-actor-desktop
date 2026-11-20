@@ -55,6 +55,15 @@ namespace FundiVoice {
             else throw new CloudFault(400,"invalid_casting_action","Неизвестное действие кастинга.");
             return FileRequest(path,action==""?"GET":"POST",action==""?null:JsonData.D(body.ContainsKey("data")?body["data"]:null));
         }
+        public object Software(){
+            return FileRequest("/v1/actor/software","GET",null);
+        }
+        public object SoftwareDownload(Dictionary<string,object> body){
+            Guid id;
+            if(!Guid.TryParseExact(JsonData.S(body,"id"),"D",out id))
+                throw new CloudFault(400,"invalid_resource","Неверный файл.");
+            return FileRequest("/v1/actor/software/download","POST",new{id=id.ToString("D")});
+        }
         public object CastingPart(string fileId,string part,byte[] bytes){
             Guid id;int number;
             if(!Guid.TryParseExact(fileId,"D",out id)||!Int32.TryParse(part,out number)||number<1||number>1152||bytes.Length<1||bytes.Length>8*1024*1024)

@@ -53,6 +53,7 @@ export const KIND_LABELS = Object.freeze({
   status_pickup:'Нужно дописать реплики',
   status_done:'Работа принята',
   file_downloaded:'Руководитель скачал запись',
+  software_update:'Студийное ПО',
   retake:'На перезапись',
   pickup:'Дописать',
   accepted:'Запись принята',

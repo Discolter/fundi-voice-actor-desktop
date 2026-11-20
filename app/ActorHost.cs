@@ -23,6 +23,7 @@ namespace FundiVoice {
         static readonly ManualResetEvent serverReady=new ManualResetEvent(false);
         static readonly string instanceId=Guid.NewGuid().ToString("N");
         static readonly HashSet<string> files=new HashSet<string>(StringComparer.Ordinal){
+            "/software-library.js", "/studio-resources.css",
             "/","/index.html","/app.js", "/casting.js", "/casting.css","/core.js","/age.js", "/file-tools.js", "/file-tools.css","/actor.css","/themes.css","/animated-themes.css","/file-browser.js","/file-browser.css","/update-notice.js","/update-notice.css","/role-image-viewer.js","/role-image-viewer.css","/studio-projects-view.js","/studio-projects-view.css","/startup-check.js","/brand-mark.png","/favicon.ico","/icon.svg"
         };
         public static void Run(string directory){
@@ -255,6 +256,7 @@ namespace FundiVoice {
         static void Route(NetworkStream stream,string method,string route,Dictionary<string,object> body){
             if(method=="GET"&&route=="status"){Json(stream,200,cloud.Status());return;}
             if(method=="GET"&&route=="studio-projects"){Json(stream,200,cloud.StudioProjects());return;}
+            if(method=="GET"&&route=="software"){Json(stream,200,cloud.Software());return;}
             if(method=="GET"&&route=="update/check"){Json(stream,200,UpdateNotice.Check(Path.GetDirectoryName(webRoot),"fundi-voice-actor-desktop","actor-update.json","actor-app.zip","FundiVoiceActor.exe"));return;}
             if(method!="POST"){Json(stream,405,new{error="Неверный способ запроса."});return;}
             if(route=="login"||route=="activate"){Json(stream,200,cloud.Login(body,route=="activate"));return;}
@@ -267,6 +269,7 @@ namespace FundiVoice {
             if(route=="vacation/update"){Json(stream,200,cloud.UpdateVacation(body));return;}
             if(route=="vacation/end"){Json(stream,200,cloud.EndVacation());return;}
             if(route=="casting"){Json(stream,200,cloud.Casting(body));return;}
+            if(route=="software/download"){Json(stream,200,cloud.SoftwareDownload(body));return;}
             if(route=="files/refresh"){Json(stream,200,cloud.FilesNow());return;}
             if(route=="file-browser"){Json(stream,200,LocalBrowse(body,false));return;}
             if(route=="files/upload"){
@@ -310,7 +313,7 @@ namespace FundiVoice {
         static void Send(NetworkStream stream,int status,byte[] body,string type){
             string header="HTTP/1.1 "+status+" "+(status==200?"OK":"Error")+"\r\nContent-Type: "+type+
                 "\r\nContent-Length: "+body.Length+"\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nReferrer-Policy: no-referrer\r\n"+
-                "Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'\r\n\r\n";
+                "Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://fundi-voice-cloud.onrender.com; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'\r\n\r\n";
             var bytes=Encoding.ASCII.GetBytes(header);stream.Write(bytes,0,bytes.Length);stream.Write(body,0,body.Length);stream.Flush();
         }
     }
