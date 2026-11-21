@@ -19,8 +19,10 @@ assert "dialog.showModal()" in browser and "dialog.addEventListener('cancel'" in
 assert "fv-browser-entry" in css
 assert "background:linear-gradient" in css
 assert 'cloud.RequireUploadRole(roleId)' in host
-assert 'source=LocalBrowsePath(source,false)' in host
+assert 'paths=paths.Select(source=>LocalBrowsePath(source,false)).ToArray()' in host
 assert "LocalAudioExtensions.Contains" in host
-assert "payload.path=selected.path" in app
+assert "selected.paths||(selected.path?[selected.path]:[])" in app
+assert "NativeFileDialogs.PickRecordings" in host
+assert "aria-multiselectable" in browser
 
 print('PASS desktop explorer: authenticated route, safe file filtering, UI, fallback')
