@@ -42,7 +42,8 @@ namespace FundiVoice.Desktop {
         long bytes,progressOffset;
         bool cancelled,committing;
         HttpWebRequest request;
-        public TransferJob(string direction,string name,long total,string roleId,string[] roleIds=null){
+        public TransferJob(string direction,string name,long total,string roleId):this(direction,name,total,roleId,null){}
+        public TransferJob(string direction,string name,long total,string roleId,string[] roleIds){
             this.direction=direction;this.name=name;this.total=total;this.roleId=roleId;
             this.roleIds=roleIds??new[]{roleId};
         }
