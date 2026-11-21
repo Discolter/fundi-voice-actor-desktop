@@ -210,6 +210,18 @@ function roleSubmissionActions(role,hidden){
   return `<button class="btn ghost" data-action="submit-without-upload" data-role="${id}" ${enabled?'':'disabled'}>Сдать без загрузки</button>
     <button class="btn primary" data-action="upload-recording" data-role="${id}" ${enabled&&!busy?'':'disabled'}>Загрузить файл</button>`;
 }
+function confirmSubmissionWithoutUpload(roleId){
+  const role=roles().find(item=>item.roleId===roleId);
+  if(!role||role.queued||role.status==='done'||role.review?.state==='pending'&&role.review.submissionId>0||modal.open)return;
+  modal.dataset.view='submit-without-upload';
+  modal.innerHTML=`<div class="modal-head">
+    <div><h2 id="modal-title">Сдать роль без загрузки?</h2><span class="muted">${e(role.character)} · ${e(role.projectTitle)}</span></div>
+  </div><div class="actor-confirm-actions">
+    <button type="button" class="btn ghost" data-action="close-modal" autofocus>Нет</button>
+    <button type="button" class="btn primary" data-action="confirm-submit-without-upload" data-role="${e(role.roleId)}">Да</button>
+  </div>`;
+  modal.showModal();
+}
 document.addEventListener('change',async event=>{
   const input=event.target.closest?.('.recording-toggle');
   if(!input)return;
@@ -313,8 +325,14 @@ document.addEventListener('click',async event=>{
     }
     if(action==='actor-transfer-cancel'){state=await api('transfer/cancel',{});render();renderTransferNotice();}
     if(action==='actor-transfer-hide'){hiddenTransferId=state.transfer?.id||'';renderTransferNotice();}
-    if(action==='submit-without-upload'){
-      button.disabled=true;state=await api('submit',{roleId:button.dataset.role,withoutUpload:true});render();toast('Сдача без загрузки отправляется руководителю.');
+    if(action==='submit-without-upload')confirmSubmissionWithoutUpload(button.dataset.role);
+    if(action==='confirm-submit-without-upload'){
+      if(!modal.open||modal.dataset.view!=='submit-without-upload'||!modal.contains(button))return;
+      button.disabled=true;
+      state=await api('submit',{roleId:button.dataset.role,withoutUpload:true});
+      if(modal.open&&modal.contains(button))modal.close();
+      else if(!modal.open)render();
+      toast('Сдача без загрузки отправляется руководителю.');
     }
     if(action==='cancel-submission'){
       const role=roles().find(item=>item.roleId===button.dataset.role);
