@@ -1,6 +1,7 @@
 // Fundi Voice desktop file browser. Calls authenticated loopback APIs only.
 export async function openFileBrowser(api,options={}) {
   const mode=options.mode==='folder'?'folder':'file';
+  const multiple=mode==='file'&&options.multiple===true;
   const title=options.title||(mode==='folder'?'Куда сохранить запись?':'Выбрать аудиофайл');
   let last='';
   try{last=localStorage.getItem('fundi-local-file-browser-'+mode)||'';}catch{}
@@ -42,6 +43,7 @@ export async function openFileBrowser(api,options={}) {
     const info=create('div','fv-browser-info','Открываем папку…');
     const list=create('div','fv-browser-list');
     list.setAttribute('role','listbox');list.setAttribute('aria-label','Файлы и папки');
+    if(multiple)list.setAttribute('aria-multiselectable','true');
     center.append(info,list);
     content.append(sidebar,center);
     const footer=create('footer','fv-browser-footer');
@@ -50,12 +52,17 @@ export async function openFileBrowser(api,options={}) {
     const native=create('button','fv-browser-native','Проводник Windows');
     native.type='button';
     const cancel=create('button','fv-browser-cancel','Отмена');cancel.type='button';
-    const accept=create('button','fv-browser-accept',mode==='folder'?'Выбрать эту папку':'Выбрать файл');
+    const accept=create('button','fv-browser-accept',mode==='folder'?'Выбрать эту папку':multiple?'Выбрать файлы':'Выбрать файл');
     accept.type='button';accept.disabled=true;
     actions.append(native,cancel,accept);footer.append(selectedLabel,actions);
     windowBox.append(header,toolbar,searchRow,content,footer);dialog.append(windowBox);
     document.body.append(dialog);
     let current='',parent='',selected='',seq=0,timeoutId=0,closed=false,loading=false;
+    const chosenPaths=new Set();
+    function updateMultipleSelection(){
+      selectedLabel.textContent=chosenPaths.size?'Выбрано файлов: '+chosenPaths.size:'Выбери одну или несколько записей';
+      accept.disabled=chosenPaths.size===0;
+    }
     const finish=value=>{
       if(closed)return;closed=true;
       clearTimeout(timeoutId);
@@ -86,13 +93,16 @@ export async function openFileBrowser(api,options={}) {
       selected='';accept.disabled=mode!=='folder';current=data.path;parent=data.parent||'';
       location.value=current;upButton.disabled=!parent;
       if(mode==='folder'){selectedLabel.textContent='Папка: '+current;}
+      else if(multiple)updateMultipleSelection();
       else{selectedLabel.textContent='Выбери запись из списка';}
       info.classList.remove('fv-browser-error');
       info.textContent=(data.searched?'Результаты поиска: ':'Содержимое папки: ')+
         (folders.length+files.length)+' · '+(data.limited?'показана часть результатов':'папки выше файлов');
       const addRow=(entry,isDir)=>{
         const row=create('button','fv-browser-entry'+(isDir?' fv-browser-directory':''));
-        row.type='button';row.setAttribute('role','option');row.setAttribute('aria-selected','false');
+        row.type='button';row.setAttribute('role','option');
+        function mark(value){row.classList.toggle('is-selected',value);row.setAttribute('aria-selected',String(value));}
+        mark(!isDir&&chosenPaths.has(entry.path));
         const glyph=create('span','fv-browser-entry-icon',isDir?'📁':'♫');
         const body=create('span','fv-browser-entry-body');
         body.append(create('strong','',entry.name));
@@ -105,8 +115,14 @@ export async function openFileBrowser(api,options={}) {
         if(data.searched)subText+=' · '+entry.path;
         body.append(create('small','',subText));
         row.append(glyph,body);
-        row.onclick=()=>{
+        row.onclick=event=>{
           if(isDir){search.value='';load(entry.path,'');return;}
+          if(multiple){
+            if(event.detail>1)return;
+            if(chosenPaths.has(entry.path))chosenPaths.delete(entry.path);
+            else chosenPaths.add(entry.path);
+            mark(chosenPaths.has(entry.path));updateMultipleSelection();return;
+          }
           selected=entry.path;
           for(const other of list.querySelectorAll('.fv-browser-entry')){
             other.classList.remove('is-selected');other.setAttribute('aria-selected','false');
@@ -117,7 +133,7 @@ export async function openFileBrowser(api,options={}) {
         };
         row.ondblclick=()=>{
           if(isDir){search.value='';load(entry.path,'');}
-          else{saveLast();finish({path:entry.path});}
+          else if(!multiple){saveLast();finish({path:entry.path});}
         };
         list.append(row);
       };
@@ -154,6 +170,10 @@ export async function openFileBrowser(api,options={}) {
     });
     accept.onclick=()=>{
       if(loading)return;
+      if(multiple){
+        if(chosenPaths.size){saveLast();finish({paths:[...chosenPaths]});}
+        return;
+      }
       const picked=mode==='folder'?current:selected;
       if(!picked)return;saveLast();finish({path:picked});
     };

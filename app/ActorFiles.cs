@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
@@ -91,57 +92,94 @@ namespace FundiVoice {
             }
             throw new CloudFault(404,"role_unavailable","Роль больше не назначена тебе. Обнови проекты.");
         }
-        public object UploadRecording(string roleId,string path){
-            RequireUploadRole(roleId);
-            string name=Path.GetFileName(path);R2Transfer.SafeName(name);
-            if(name!=R2Transfer.SafeName(name))throw new CloudFault(400,"invalid_file_name","Переименуй файл без специальных символов и повтори.");
-            long size=new FileInfo(path).Length;
-            if(size<1||size>R2Transfer.MaximumBytes)throw new CloudFault(400,"invalid_file_size","Выбери запись от 1 байта до 2 ГиБ.");
-            lock(syncGate)transfers.Start("upload",name,size,roleId,delegate(TransferJob job){
-                // Hold a read-only handle through confirmation: an editor cannot change the
-                // bytes after their fingerprint has selected the persistent reservation.
-                using(var input=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read)){
-                    if(input.Length!=size)throw new CloudFault(409,"file_changed","Файл изменился. Закончи экспорт записи и выбери его заново.");
-                    job.SetPhase("Проверяем запись…");
-                    string fingerprint=UploadFingerprint(input,roleId,name,job);
-                    string journalPath=sessionFile+".uploads";
-                    var journal=PrivateFile.Read(journalPath);
-                    object raw;bool retry=journal.TryGetValue(fingerprint,out raw);
-                    var attempt=JsonData.D(raw);
-                    if(!retry){
-                        attempt=new Dictionary<string,object>{{"requestId",Guid.NewGuid().ToString("D")}};
-                        // Persist before POST: a lost response must reuse the same request ID.
-                        journal[fingerprint]=attempt;PrivateFile.Save(journalPath,journal);
+        public object UploadRecordings(string roleId,string[] roleIds,string[] paths){
+            if(paths.Length<1||paths.Length>1000||roleIds.Length<1||roleIds.Length>20000||
+                !roleIds.Contains(roleId)||roleIds.Distinct(StringComparer.Ordinal).Count()!=roleIds.Length||
+                (roleIds.Length>1&&paths.Length!=1))
+                throw new CloudFault(400,"invalid_submission","Выбери записи для одной роли или один файл для нескольких ролей серии.");
+            if(paths.Distinct(StringComparer.OrdinalIgnoreCase).Count()!=paths.Length)
+                throw new CloudFault(400,"invalid_file","Один файл можно выбрать только один раз.");
+            var files=paths.Select(path=>new FileInfo(path)).ToArray();
+            var sizes=files.Select(file=>{
+                if(file.Name!=R2Transfer.SafeName(file.Name))
+                    throw new CloudFault(400,"invalid_file_name","Переименуй файл без специальных символов и повтори.");
+                if(file.Length<1||file.Length>R2Transfer.MaximumBytes)
+                    throw new CloudFault(400,"invalid_file_size","Выбери запись от 1 байта до 2 ГиБ.");
+                return file.Length;
+            }).ToArray();
+            bool batch=files.Length>1||roleIds.Length>1;
+            lock(syncGate){
+                foreach(var id in roleIds)RequireUploadRole(id);
+                if(batch){
+                    lock(gate){
+                        object view;session.TryGetValue("view",out view);
+                        if(!JsonData.B(JsonData.D(view),"recordingBatchesAvailable"))
+                            throw new CloudFault(409,"server_outdated","Сервер ещё обновляется. Попробуй чуть позже.");
                     }
-                    job.Check();job.SetPhase(retry?"Проверяем предыдущую попытку…":"Резервируем место…");
-                    var begun=FileRequest("/v1/actor/files/begin","POST",new{roleId=roleId,fileName=name,size=size,requestId=JsonData.S(attempt,"requestId")});
-                    string fileId=JsonData.S(begun,"fileId");job.SetFileId(fileId);
-                    attempt["fileId"]=fileId;PrivateFile.Save(journalPath,journal);job.Check();
-                    bool uploaded=JsonData.B(begun,"uploaded");
-                    if(!uploaded&&retry)uploaded=VerifyRecording(fileId);
-                    if(!uploaded){
-                        try{R2Transfer.Upload(JsonData.S(begun,"uploadUrl"),path,size,job);}
-                        catch(WebException problem){
-                            string message=R2Transfer.NetworkMessage(problem);
-                            job.Check();job.SetPhase("Связь прервалась. Проверяем файл в облаке…");
-                            if(!VerifyRecording(fileId))throw new CloudFault(0,"upload_interrupted",message+" Повторная попытка использует прежний резерв места.");
-                            uploaded=true;
-                        }
-                        catch(IOException){
-                            job.Check();job.SetPhase("Проверяем файл в облаке…");
-                            if(!VerifyRecording(fileId))throw new CloudFault(0,"upload_interrupted","Передача прервалась. Выбери тот же файл повторно: новый резерв места не потребуется.");
-                            uploaded=true;
-                        }
-                    }
-                    job.Progress(size);job.Commit();
-                    if(!uploaded&&!VerifyRecording(fileId))throw new CloudFault(502,"upload_incomplete","Сервер ещё не подтвердил запись. Выбери тот же файл повторно или нажми «Проверить загрузку».");
-                    job.SetPhase("Сдаём роль…");
-                    SubmitRecording(roleId,fileId);
-                    ForgetUpload(fileId);
-                    Poll();
                 }
-            });
+                string label=files.Length==1?files[0].Name:"Файлов: "+files.Length;
+                transfers.Start("upload",label,sizes.Sum(),roleId,delegate(TransferJob job){
+                    long sent=0;
+                    var fileIds=new string[files.Length];
+                    for(int index=0;index<files.Length;index++){
+                        job.SetProgressOffset(sent);
+                        fileIds[index]=PrepareRecording(roleId,files[index],sizes[index],job);
+                        sent+=sizes[index];
+                    }
+                    job.Commit();
+                    job.SetPhase(roleIds.Length==1?"Сдаём роль…":"Сдаём выбранные роли…");
+                    if(batch){
+                        string requestId=fileIds.OrderBy(id=>id,StringComparer.Ordinal).First();
+                        FileRequest("/v1/actor/submit","POST",new{roleId=roleId,roleIds=roleIds,fileIds=fileIds,requestId=requestId});
+                    }else SubmitRecording(roleId,fileIds[0]);
+                    ForgetUploads(fileIds);
+                    Poll();
+                },roleIds);
+            }
             return Status();
+        }
+        string PrepareRecording(string roleId,FileInfo file,long size,TransferJob job){
+            // Keep a read handle open from fingerprinting through verification.
+            string name=file.Name,path=file.FullName;
+            using(var input=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read)){
+                if(input.Length!=size)throw new CloudFault(409,"file_changed","Файл изменился. Закончи экспорт записи и выбери его заново.");
+                job.SetPhase("Проверяем запись…");
+                string fingerprint=UploadFingerprint(input,roleId,name,job);
+                string journalPath=sessionFile+".uploads";
+                var journal=PrivateFile.Read(journalPath);
+                object raw;bool retry=journal.TryGetValue(fingerprint,out raw);
+                var attempt=JsonData.D(raw);
+                if(!retry){
+                    attempt=new Dictionary<string,object>{{"requestId",Guid.NewGuid().ToString("D")}};
+                    // Persist before POST so a lost response reuses the original reservation.
+                    journal[fingerprint]=attempt;PrivateFile.Save(journalPath,journal);
+                }
+                job.Check();job.SetPhase(retry?"Проверяем предыдущую попытку…":"Резервируем место…");
+                var begun=FileRequest("/v1/actor/files/begin","POST",new{roleId=roleId,fileName=name,size=size,requestId=JsonData.S(attempt,"requestId")});
+                string fileId=JsonData.S(begun,"fileId");job.SetFileId(fileId);
+                attempt["fileId"]=fileId;PrivateFile.Save(journalPath,journal);job.Check();
+                bool uploaded=JsonData.B(begun,"uploaded");
+                if(!uploaded&&retry)uploaded=VerifyRecording(fileId);
+                if(!uploaded){
+                    try{R2Transfer.Upload(JsonData.S(begun,"uploadUrl"),path,size,job);}
+                    catch(WebException problem){
+                        string message=R2Transfer.NetworkMessage(problem);
+                        job.Check();job.SetPhase("Связь прервалась. Проверяем файл в облаке…");
+                        if(!VerifyRecording(fileId))throw new CloudFault(0,"upload_interrupted",message+" Повторная попытка использует прежний резерв места.");
+                        uploaded=true;
+                    }
+                    catch(IOException){
+                        job.Check();job.SetPhase("Проверяем файл в облаке…");
+                        if(!VerifyRecording(fileId))throw new CloudFault(0,"upload_interrupted","Передача прервалась. Выбери тот же файл повторно: новый резерв места не потребуется.");
+                        uploaded=true;
+                    }
+                }
+                job.Progress(size);
+                if(!uploaded&&!VerifyRecording(fileId))
+                    throw new CloudFault(502,"upload_incomplete","Сервер ещё не подтвердил запись. Выбери те же файлы повторно.");
+                job.Check();
+                return fileId;
+            }
         }
         string UploadFingerprint(Stream input,string roleId,string name,TransferJob job){
             using(var hash=SHA256.Create()){
@@ -175,12 +213,12 @@ namespace FundiVoice {
             string roleId=JsonData.S(file,"roleId");RequireUploadRole(roleId);
             var result=FileRequest("/v1/actor/files/complete","POST",new{fileId=fileId});
             if(!JsonData.B(result,"uploaded"))throw new CloudFault(409,"upload_incomplete","Загрузка ещё не подтверждена.");
-            SubmitRecording(roleId,fileId);ForgetUpload(fileId);Poll();return Status();
+            SubmitRecording(roleId,fileId);ForgetUploads(new[]{fileId});Poll();return Status();
         }
-        void ForgetUpload(string fileId){
+        void ForgetUploads(string[] fileIds){
             string path=sessionFile+".uploads";
             var journal=PrivateFile.Read(path);var remove=new List<string>();
-            foreach(var item in journal)if(JsonData.S(JsonData.D(item.Value),"fileId")==fileId)remove.Add(item.Key);
+            foreach(var item in journal)if(fileIds.Contains(JsonData.S(JsonData.D(item.Value),"fileId")))remove.Add(item.Key);
             if(remove.Count==0)return;
             foreach(string key in remove)journal.Remove(key);
             PrivateFile.Save(path,journal);
@@ -189,7 +227,7 @@ namespace FundiVoice {
             lock(syncGate){
                 if(transfers.Busy)throw new CloudFault(409,"transfer_busy","Сначала заверши или отмени текущую передачу, затем удали файл.");
                 FileRequest("/v1/actor/files/delete","POST",new{fileId=fileId});
-                ForgetUpload(fileId);RefreshFiles(false);return Status();
+                ForgetUploads(new[]{fileId});RefreshFiles(false);return Status();
             }
         }
         public object CancelTransfer(){transfers.Cancel();return Status();}
