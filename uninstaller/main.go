@@ -69,7 +69,17 @@ func main() {
 	script := fmt.Sprintf(`$ErrorActionPreference = 'Stop'
 $target = %s
 $w = New-Object -ComObject WScript.Shell
-$items = @([IO.Path]::Combine([Environment]::GetFolderPath('Desktop'),'Fundi Voice Actor.lnk'),[IO.Path]::Combine([Environment]::GetFolderPath('Programs'),'Fundi Voice Actor','Fundi Voice Actor.lnk'),[IO.Path]::Combine([Environment]::GetFolderPath('Programs'),'Fundi Voice Actor','Fundi Voice Actor - Откат версии.lnk'))
+$items = @()
+$desktop = [Environment]::GetFolderPath('DesktopDirectory')
+if ($desktop) {
+  $items += [IO.Path]::Combine($desktop, 'Fundi Voice Actor.lnk')
+}
+$programs = [Environment]::GetFolderPath('Programs')
+if ($programs) {
+  $start = [IO.Path]::Combine($programs, 'Fundi Voice Actor')
+  $items += [IO.Path]::Combine($start, 'Fundi Voice Actor.lnk')
+  $items += [IO.Path]::Combine($start, 'Fundi Voice Actor - Откат версии.lnk')
+}
 foreach ($s in $items) {
   if (Test-Path -LiteralPath $s) {
     try { if ($w.CreateShortcut($s).TargetPath -ieq [IO.Path]::Combine($target,'FundiVoiceActor.exe')) { Remove-Item -LiteralPath $s -Force } } catch {}
@@ -78,7 +88,7 @@ foreach ($s in $items) {
 `, psQuote(dir))
 	tempScript, err := os.CreateTemp("", "fundi-remove-shortcuts-*.ps1")
 	if err == nil {
-		_, _ = tempScript.WriteString(script)
+		_, _ = tempScript.WriteString("\ufeff" + script)
 		_ = tempScript.Close()
 		_ = runQuiet(psExe(), "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", tempScript.Name())
 		_ = os.Remove(tempScript.Name())
