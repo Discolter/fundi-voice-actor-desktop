@@ -24,7 +24,7 @@ const app=document.querySelector('#app'),modal=document.querySelector('#modal');
 let state={authenticated:false,server:'',username:'',view:null,error:'',lastSync:'',busy:false};
 let ui={page:'projects',query:'',filter:'all',roleSort:'default',activate:false,recover:false,theme:'aurora',motion:true,expanded:new Set(),collapsed:new Set()},token='',formBusy=false,lastStatus='';
 try{const saved=JSON.parse(localStorage.getItem('fundi-actor-appearance')||'{}');if(THEMES.some(t=>t[0]===saved.theme))ui.theme=saved.theme;if(saved.motion===false)ui.motion=false;if(ACTOR_ROLE_SORTS.some(([id])=>id===saved.roleSort))ui.roleSort=saved.roleSort;}catch{}
-let notificationLimit=50,recordingRoleFilter='',hiddenTransferId='';
+let notificationLimit=50,hiddenTransferId='';
 
 let studioCatalog=null,studioCatalogLoading=false,studioCatalogError='',studioCatalogCheckedAt=0;
 let studioMirror={filter:'active',sort:'name',layout:'grid',projectId:'',episodeId:'',roleStatus:'all',roleActor:'all',roleOrder:'original'};
@@ -116,7 +116,7 @@ function render(){
   const pageHeading=softwarePage?'':`<h1>${ui.page==='casting'?'Кастинг':ui.page==='vacation'?'Отпуск':ui.page==='files'?'Мои файлы':ui.page==='projects'?'Твои проекты':ui.page==='studioProjects'?'Проекты студии':ui.page==='history'?'История ролей':'Мои долги'}</h1>`;
   const roleSearch=softwarePage?'':`<label class="actor-search">${icon('search')}<input id="search" placeholder="Найти роль или проект" value="${e(ui.query)}"></label>`;
   const focused=!softwarePage&&document.activeElement?.id==='search',caret=focused?document.activeElement.selectionStart:0;
-  app.innerHTML=`<div class="actor-shell"><aside class="actor-sidebar"><div class="actor-brand"><img src="brand-mark.png" alt=""><span>Fundi Voice<small>Actor</small></span></div><nav><button class="nav-item ${ui.page==='projects'?'active':''}" data-page="projects">${icon('projects')}<span>Проекты</span><b>${projects.length}</b></button><button class="nav-item ${ui.page==='studioProjects'?'active':''}" data-page="studioProjects">${icon('studioProjects')}<span>Проекты студии</span></button><button class="nav-item ${ui.page==='debts'?'active':''} ${needsCorrection(debts)?'needs-attention':''}" data-page="debts">${icon('debts')}<span>Мои долги</span><b>${debts.length}</b></button><button class="nav-item ${ui.page==='history'?'active':''}" data-page="history">${icon('history')}<span>История</span><b>${archived.length}</b></button><button class="nav-item ${ui.page==='files'?'active':''}" data-action="recordings" aria-current="${ui.page==='files'?'page':'false'}">${icon('files')}<span>Мои файлы</span></button><button class="nav-item ${ui.page==='casting'?'active':''}" data-page="casting">${icon('casting')}<span>Кастинг</span></button><button class="nav-item ${ui.page==='software'?'active':''}" data-page="software">${icon('software')}<span>Студийное ПО</span></button></nav><div class="actor-profile"><div class="profile-initial">${e(state.username.slice(0,1).toUpperCase())}</div><div><strong>${e(state.username)}</strong><small>Актёр студии</small></div><button class="icon-btn" data-action="settings" aria-label="Настройки" title="Настройки">${icon('settings')}</button></div><button class="nav-item vacation-sidebar ${ui.page==='vacation'?'active':''}" data-page="vacation">${icon('vacation')}<span>Отпуск</span>${state.vacation?.current?.status==='active'?'<b>В отпуске</b>':''}</button></aside><main class="actor-main"><header class="actor-top"><div><span class="eyebrow">ЛИЧНОЕ ПРОСТРАНСТВО</span>${pageHeading}</div><div class="actor-tools"><button class="icon-btn notification-bell" data-action="messages" aria-label="Уведомления" title="Уведомления">${icon('bell')}<b data-message-count ${unread()||state.mailbox?.failed?.length?'':'hidden'}>${unread()||(state.mailbox?.failed?.length?'!':'')}</b></button>${roleSearch}<button class="btn ghost icon-text" data-action="sync" ${state.busy?'disabled':''}>${icon('sync')}${state.busy?'Обновляем…':'Обновить'}</button></div></header><div class="sync-line"><span class="sync-dot ${state.error?'offline':''}"></span><span>${state.error?'Нет свежего обновления':'Обновлено'} · ${e(stamp(state.lastSync))}</span></div>${state.error?`<div class="offline-note">${e(state.error)} Сохранённые назначения доступны для просмотра.</div>`:''}<div class="actor-content">${ui.page==='software'?'<div id="software-root"></div>':ui.page==='casting'?'<div id="casting-root"></div>':ui.page==='vacation'?vacationView():ui.page==='files'?actorFilesContent(''):ui.page==='projects'?renderProjects(active):ui.page==='studioProjects'?renderStudioCatalog():ui.page==='history'?renderHistory(archived):renderDebts(active)}</div><footer>Назначения обновляются раз в минуту, пока приложение работает. Закрытие окна оставляет приложение в трее.</footer></main></div>`;
+  app.innerHTML=`<div class="actor-shell"><aside class="actor-sidebar"><div class="actor-brand"><img src="brand-mark.png" alt=""><span>Fundi Voice<small>Actor</small></span></div><nav><button class="nav-item ${ui.page==='projects'?'active':''}" data-page="projects">${icon('projects')}<span>Проекты</span><b>${projects.length}</b></button><button class="nav-item ${ui.page==='studioProjects'?'active':''}" data-page="studioProjects">${icon('studioProjects')}<span>Проекты студии</span></button><button class="nav-item ${ui.page==='debts'?'active':''} ${needsCorrection(debts)?'needs-attention':''}" data-page="debts">${icon('debts')}<span>Мои долги</span><b>${debts.length}</b></button><button class="nav-item ${ui.page==='history'?'active':''}" data-page="history">${icon('history')}<span>История</span><b>${archived.length}</b></button><button class="nav-item ${ui.page==='files'?'active':''}" data-action="recordings" aria-current="${ui.page==='files'?'page':'false'}">${icon('files')}<span>Мои файлы</span></button><button class="nav-item ${ui.page==='casting'?'active':''}" data-page="casting">${icon('casting')}<span>Кастинг</span></button><button class="nav-item ${ui.page==='software'?'active':''}" data-page="software">${icon('software')}<span>Студийное ПО</span></button></nav><div class="actor-profile"><div class="profile-initial">${e(state.username.slice(0,1).toUpperCase())}</div><div><strong>${e(state.username)}</strong><small>Актёр студии</small></div><button class="icon-btn" data-action="settings" aria-label="Настройки" title="Настройки">${icon('settings')}</button></div><button class="nav-item vacation-sidebar ${ui.page==='vacation'?'active':''}" data-page="vacation">${icon('vacation')}<span>Отпуск</span>${state.vacation?.current?.status==='active'?'<b>В отпуске</b>':''}</button></aside><main class="actor-main"><header class="actor-top"><div><span class="eyebrow">ЛИЧНОЕ ПРОСТРАНСТВО</span>${pageHeading}</div><div class="actor-tools"><button class="icon-btn notification-bell" data-action="messages" aria-label="Уведомления" title="Уведомления">${icon('bell')}<b data-message-count ${unread()||state.mailbox?.failed?.length?'':'hidden'}>${unread()||(state.mailbox?.failed?.length?'!':'')}</b></button>${roleSearch}<button class="btn ghost icon-text" data-action="sync" ${state.busy?'disabled':''}>${icon('sync')}${state.busy?'Обновляем…':'Обновить'}</button></div></header><div class="sync-line"><span class="sync-dot ${state.error?'offline':''}"></span><span>${state.error?'Нет свежего обновления':'Обновлено'} · ${e(stamp(state.lastSync))}</span></div>${state.error?`<div class="offline-note">${e(state.error)} Сохранённые назначения доступны для просмотра.</div>`:''}<div class="actor-content">${ui.page==='software'?'<div id="software-root"></div>':ui.page==='casting'?'<div id="casting-root"></div>':ui.page==='vacation'?vacationView():ui.page==='files'?actorFilesContent():ui.page==='projects'?renderProjects(active):ui.page==='studioProjects'?renderStudioCatalog():ui.page==='history'?renderHistory(archived):renderDebts(active)}</div><footer>Назначения обновляются раз в минуту, пока приложение работает. Закрытие окна оставляет приложение в трее.</footer></main></div>`;
   if(softwarePage)software.mount(document.querySelector('#software-root'));
   if(ui.page==='casting')casting.mount(document.querySelector('#casting-root'));
   if(focused){const input=document.querySelector('#search');input.focus();input.setSelectionRange(caret,caret);}
@@ -186,12 +186,29 @@ function roleImageThumb(role) {
 }
 function roleRow(role,showProject=true,hidden=false){
   const late=role.due&&role.due<today()&&isDebt(role);
-  const review=role.review,waiting=role.queued||review?.state==='pending',accepted=role.status==='done';
-  const canSubmit=enabled=>enabled&&!role.queued&&!accepted;
-  const submitLabel=role.queued?'Отправляем…':accepted?'Принято':waiting?'Отправить повторно':role.status==='retake'?'Сдать исправленное':role.status==='pickup'?'Сдать дописанное':'Сдать на проверку';
+  const review=role.review;
   const feedback=review?.messageText&&(review.messageKind==='note'||review.messageKind===review.state)?review.messageText:'';
-  const enabled=state.view?.reviewApiAvailable===true;
-  return `<div class="actor-role-wrap"><div class="actor-role" data-status="${e(role.status)}"><div class="role-name">${roleImageThumb(role)}<strong>${e(role.character)}</strong><span class="actor-tier-label actor-tier-${actorRoleTier(role)}">${e(actorRoleTierLabel(role))}</span>${Number.isInteger(role.lineCount)&&role.lineCount>=0?`<small class="actor-role-lines ${actorWorkloadClass(role.lineCount)}" title="${role.lineCount<=50?'Мало реплик (0–50)':role.lineCount<=100?'Средний объём (51–100)':'Много реплик (101+)'}">Реплик: ${role.lineCount}</small>`:''}${showProject?`<small>${e(role.projectTitle)} · ${role.season?'С'+e(role.season)+' · ':''}${role.episodeNumber?'Серия '+e(role.episodeNumber):e(role.episodeTitle||'Серия')}</small>`:''}</div><span class="role-stage stage-${e(role.status)}">${e(role.reviewLabel)}</span>${['waiting','retake','pickup','recording'].includes(role.status)?`<label class="actor-recording-check" title="Отметить начало записи"><input type="checkbox" class="recording-toggle" data-role="${e(role.roleId)}" ${role.status==='recording'?'checked':''}> В записи</label>`:''}${ageBadge(role.createdAt)}<span class="role-due ${late?'overdue':''}">${late?'Просрочено · ':''}${e(dueLabel(role.due))}</span>${accepted?`<button class="btn ghost actor-role-visibility" data-action="role-visibility" data-role="${e(role.roleId)}" data-hidden="${hidden?'false':'true'}">${hidden?'Вернуть в мои роли':'Скрыть из кабинета'}</button>`:''}<button class="btn ${waiting||accepted?'ghost':'primary'} submit-role" data-action="submit-role" data-role="${e(role.roleId)}" ${!canSubmit(enabled)?'disabled':''} title="${!enabled?'Руководителю нужно обновить сервер до Cloud 0.3.1':role.queued?'Дождись завершения предыдущей отправки':accepted?'Роль принята':'Загрузить запись и сдать на проверку'}">${submitLabel}</button></div>${feedback?`<div class="role-feedback" data-kind="${e(review.messageKind)}"><strong>${e(messageKind(review.messageKind))}</strong><p>${e(feedback)}</p></div>`:''}</div>`;
+  return `<div class="actor-role-wrap"><div class="actor-role" data-status="${e(role.status)}">
+    <div class="role-name">${roleImageThumb(role)}<strong>${e(role.character)}</strong><span class="actor-tier-label actor-tier-${actorRoleTier(role)}">${e(actorRoleTierLabel(role))}</span>${Number.isInteger(role.lineCount)&&role.lineCount>=0?`<small class="actor-role-lines ${actorWorkloadClass(role.lineCount)}" title="${role.lineCount<=50?'Мало реплик (0–50)':role.lineCount<=100?'Средний объём (51–100)':'Много реплик (101+)'}">Реплик: ${role.lineCount}</small>`:''}${showProject?`<small>${e(role.projectTitle)} · ${role.season?'С'+e(role.season)+' · ':''}${role.episodeNumber?'Серия '+e(role.episodeNumber):e(role.episodeTitle||'Серия')}</small>`:''}</div>
+    <div class="actor-role-progress"><span class="role-stage stage-${e(role.status)}">${e(role.reviewLabel)}</span>${['waiting','retake','pickup','recording'].includes(role.status)?`<label class="actor-recording-check" title="Отметить начало записи"><input type="checkbox" class="recording-toggle" data-role="${e(role.roleId)}" ${role.status==='recording'?'checked':''}> В записи</label>`:''}${ageBadge(role.createdAt)}</div>
+    <span class="role-due ${late?'overdue':''}">${late?'Просрочено · ':''}${e(dueLabel(role.due))}</span>
+    <div class="actor-role-submission">${roleSubmissionActions(role,hidden)}</div>
+  </div>${feedback?`<div class="role-feedback" data-kind="${e(review.messageKind)}"><strong>${e(messageKind(review.messageKind))}</strong><p>${e(feedback)}</p></div>`:''}</div>`;
+}
+function roleSubmissionActions(role,hidden){
+  const id=e(role.roleId);
+  if(role.status==='done')
+    return `<button class="btn ghost actor-role-visibility" data-action="role-visibility" data-role="${id}" data-hidden="${hidden?'false':'true'}">${hidden?'Вернуть в мои роли':'Скрыть из кабинета'}</button>`;
+  const transfer=state.transfer;
+  const busy=transfer?.state==='running';
+  const enabled=state.view?.submissionActionsAvailable===true;
+  if(busy&&transfer.roleId===role.roleId)
+    return transfer.canCancel?'<button class="btn ghost danger" data-action="actor-transfer-cancel">Отменить загрузку</button>':`<span class="muted">${e(transfer.phase)}</span>`;
+  if(role.queued)return '';
+  if(enabled&&role.review?.state==='pending'&&role.review.submissionId>0)
+    return `<button class="btn ghost danger" data-action="cancel-submission" data-role="${id}" ${busy?'disabled':''}>Отменить сдачу</button>`;
+  return `<button class="btn ghost" data-action="submit-without-upload" data-role="${id}" ${enabled?'':'disabled'}>Сдать без загрузки</button>
+    <button class="btn primary" data-action="upload-recording" data-role="${id}" ${enabled&&!busy?'':'disabled'}>Загрузить файл</button>`;
 }
 document.addEventListener('change',async event=>{
   const input=event.target.closest?.('.recording-toggle');
@@ -203,39 +220,25 @@ document.addEventListener('change',async event=>{
     toast(desired?'Отмечено: запись начата.':'Отметка записи снята.');
   }catch(err){input.checked=!desired;input.disabled=false;toast(err.message||'Не удалось обновить статус',true);}
 });
-function showSubmission(roleId){
-  const role=roles().find(item=>item.roleId===roleId);if(!role)return;
-  modal.dataset.view='submit';
-  const uploaded=(state.files||[]).filter(f=>f.roleId===roleId&&f.status==='ready').length;
-  modal.innerHTML=`<div class="modal-head"><div><h2 id="modal-title">${role.review?.state==='pending'?'Повторная сдача':role.status==='retake'?'Сдать исправленное':role.status==='pickup'?'Сдать дописанное':'Сдать на проверку'}</h2><span class="muted">${e(role.character)} · ${e(role.projectTitle)} · ${role.episodeNumber?'Серия '+e(role.episodeNumber):'Серия'}</span></div><button class="icon-btn" data-action="close-modal" aria-label="Закрыть">${icon('close')}</button></div><div class="submission-upload"><p class="review-intro">Выбери готовую запись или ZIP с дублями. После загрузки программа сама сдаст роль и уведомит руководителя.</p><button class="btn primary" data-action="upload-recording" data-role="${e(roleId)}" ${state.transfer?.state==='running'?'disabled':''}>Выбрать запись и загрузить</button><p class="file-hint">WAV, ZIP, FLAC, MP3, OGG · до 2 ГиБ на файл. Перед выбором закончи экспорт записи.</p>${state.fileError?`<p class="file-error">${e(state.fileError)}</p>`:''}${storageMeter(state.usedBytes,state.quotaBytes)}<button class="btn ghost" data-action="role-recordings" data-role="${e(roleId)}">Загруженные записи${uploaded?' · '+uploaded:''}</button></div><details class="file-telegram"><summary>Запись отправлена в Telegram</summary><p class="file-hint">Если передал файл в рабочем чате, отправь уведомление о сдаче отдельно.</p><button class="btn ghost" data-action="confirm-submit" data-role="${e(roleId)}">Файл отправлен — сдать</button></details>`;
-  if(!modal.open)modal.showModal();
-}
-async function showActorFiles(roleId=''){
-  recordingRoleFilter=roleId;state=await api('files/refresh',{});
-  if(roleId)renderActorFiles();else{ui.page='files';ui.query='';modal.close();render();}
+async function showActorFiles(){
+  state=await api('files/refresh',{});
+  ui.page='files';ui.query='';modal.close();render();
   renderTransferNotice();
 }
-function refreshFilesView(){if(modal.open&&modal.dataset.view==='recordings')renderActorFiles();else render();}
-function renderActorFiles(){
-  const scroll=modal.querySelector('.recording-list')?.scrollTop||0;
-  modal.dataset.view='recordings';
-  modal.innerHTML=`<div class="modal-head"><div><h2 id="modal-title">Записи роли</h2><span class="muted">Готовые и незавершённые загрузки</span></div><button class="icon-btn" data-action="close-modal" aria-label="Закрыть">${icon('close')}</button></div>${actorFilesContent(recordingRoleFilter)}`;
-  if(!modal.open)modal.showModal();modal.querySelector('.recording-list').scrollTop=scroll;
-}
-function actorFilesContent(roleId){
-  const items=(state.files||[]).filter(f=>(!roleId||f.roleId===roleId)&&(!ui.query||f.fileName.toLocaleLowerCase('ru').includes(ui.query.toLocaleLowerCase('ru'))));
+function actorFilesContent(){
+  const items=(state.files||[]).filter(f=>!ui.query||f.fileName.toLocaleLowerCase('ru').includes(ui.query.toLocaleLowerCase('ru')));
   const busy=state.transfer?.state==='running';
   return `${storageMeter(state.usedBytes,state.quotaBytes)}<div class="file-toolbar"><button class="btn ghost" data-action="refresh-recordings">Обновить список</button></div>${state.fileError?`<p class="file-error">${e(state.fileError)}</p>`:''}<div class="recording-list">${items.map(f=>{
     const role=roles().find(r=>r.roleId===f.roleId);
-    return `<article class="recording-entry"><strong>${e(f.fileName)}</strong><div class="recording-context">${role?e(role.character+' · '+role.projectTitle):'Роль больше не назначена тебе'}</div><div class="recording-meta"><span>${e(formatBytes(f.size))}</span><span>${e(stamp(f.createdAt))}</span><span>${e(fileStatus(f.status))}</span></div><div class="recording-actions">${role&&role.status!=='done'&&f.status!=='deleting'?`<button class="btn ghost" data-action="confirm-recording" data-file="${e(f.fileId)}" ${busy||role.queued?'disabled':''}>${f.status==='ready'?'Сдать загруженное':'Проверить загрузку'}</button>`:''}<button class="btn ghost danger" data-action="delete-recording" data-file="${e(f.fileId)}" ${busy?'disabled':''}>${f.status==='deleting'?'Повторить удаление':'Удалить из облака'}</button></div></article>`;
-  }).join('')||'<div class="recording-empty">Файлов пока нет. Открой роль и нажми «Сдать на проверку».</div>'}</div><p class="file-hint">Здесь можно удалить готовую запись или незавершённую загрузку и освободить место. Во время передачи сначала нажми «Отменить передачу».</p>`;
+    return `<article class="recording-entry"><strong>${e(f.fileName)}</strong><div class="recording-context">${role?e(role.character+' · '+role.projectTitle):'Роль больше не назначена тебе'}</div><div class="recording-meta"><span>${e(formatBytes(f.size))}</span><span>${e(stamp(f.createdAt))}</span><span>${e(fileStatus(f.status))}</span></div><div class="recording-actions">${role&&role.status!=='done'&&role.review?.state!=='pending'&&!f.submitted&&f.status!=='deleting'?`<button class="btn ghost" data-action="confirm-recording" data-file="${e(f.fileId)}" ${busy||role.queued?'disabled':''}>${f.status==='ready'?'Сдать загруженное':'Проверить загрузку'}</button>`:''}<button class="btn ghost danger" data-action="delete-recording" data-file="${e(f.fileId)}" ${busy?'disabled':''}>${f.status==='deleting'?'Повторить удаление':'Удалить из облака'}</button></div></article>`;
+  }).join('')||'<div class="recording-empty">Файлов пока нет. Открой роль и нажми «Загрузить файл».</div>'}</div><p class="file-hint">Здесь можно удалить готовую запись или незавершённую загрузку и освободить место. Во время передачи сначала нажми «Отменить передачу».</p>`;
 }
 function showMessages(){
   const scroll=modal.querySelector('.notification-list')?.scrollTop||0;
   modal.dataset.view='messages';
   const messages=[...(state.mailbox?.messages||[])].sort((a,b)=>b.id-a.id),failed=state.mailbox?.failed||[];
   const messagesToolbar=messages.length?`<div class="notification-toolbar"><span class="muted">История сообщений</span><button class="btn ghost delete-all" data-action="delete-all-messages">Удалить все</button></div>`:'';
-  modal.innerHTML=`<div class="modal-head"><div><h2 id="modal-title">Уведомления</h2><span class="muted">${unread()?unread()+' непрочитанных':'Все прочитаны'}</span></div><button class="icon-btn" data-action="close-modal" aria-label="Закрыть">${icon('close')}</button></div>${messagesToolbar}${failed.length?`<p class="form-error">Не отправлено: ${e(failed.at(-1).error)} Можно повторить сдачу из списка ролей.</p><button class="btn ghost" data-action="dismiss-failed">Убрать ошибки</button>`:''}<div class="notification-list">${messages.slice(0,notificationLimit).map(item=>`<article class="notification-item ${item.read?'':'unread'}" data-kind="${e(item.kind||'')}"><div class="notification-item-head"><strong>${e(messageKind(item.kind))}</strong><time>${e(stamp(item.createdAt))}</time></div>${item.kind==='software_update'?'':`<div class="notification-role">${e(item.role?.character||'Неизвестная роль')} · ${e(item.role?.projectTitle||'Проект')} · ${item.role?.episodeNumber?'Серия '+e(item.role.episodeNumber):'Серия'}</div>`}${item.text&&item.text!==messageKind(item.kind)?`<p>${e(item.text)}</p>`:''}<div class="notification-actions">${item.kind==='software_update'?`<button class="btn ghost" data-action="message-software" data-id="${e(item.role?.roleId?.slice(9)||'')}">К программе</button>`:''}${item.role?.roleId&&hasAssignedRole(roles(),item.role?.roleId)?`<button class="btn ghost" data-action="message-role" data-message="${item.id}" data-role="${e(item.role.roleId)}">Открыть роль</button>`:''}${(item.kind==='retake'||item.kind==='note'||item.kind==='status_retake'||item.kind==='pickup'||item.kind==='status_pickup')&&hasAssignedRole(roles().filter(role=>role.status!=='done'&&!role.queued),item.role?.roleId)?`<button class="btn ghost" data-action="submit-role" data-role="${e(item.role.roleId)}">Сдать исправленное</button>`:''}<button class="btn ghost delete-message" data-action="delete-message" data-message="${item.id}">Удалить</button>${!item.read?`<button class="btn ghost" data-action="read-message" data-message="${item.id}">Прочитано</button>`:''}</div></article>`).join('')||'<p class="muted">Назначения ролей, решения руководителя и изменения статусов появятся здесь.</p>'}</div>${messages.length>notificationLimit?'<button class="btn ghost" data-action="more-messages">Показать ещё</button>':''}`;
+  modal.innerHTML=`<div class="modal-head"><div><h2 id="modal-title">Уведомления</h2><span class="muted">${unread()?unread()+' непрочитанных':'Все прочитаны'}</span></div><button class="icon-btn" data-action="close-modal" aria-label="Закрыть">${icon('close')}</button></div>${messagesToolbar}${failed.length?`<p class="form-error">Не отправлено: ${e(failed.at(-1).error)} Можно повторить сдачу из списка ролей.</p><button class="btn ghost" data-action="dismiss-failed">Убрать ошибки</button>`:''}<div class="notification-list">${messages.slice(0,notificationLimit).map(item=>`<article class="notification-item ${item.read?'':'unread'}" data-kind="${e(item.kind||'')}"><div class="notification-item-head"><strong>${e(messageKind(item.kind))}</strong><time>${e(stamp(item.createdAt))}</time></div>${item.kind==='software_update'?'':`<div class="notification-role">${e(item.role?.character||'Неизвестная роль')} · ${e(item.role?.projectTitle||'Проект')} · ${item.role?.episodeNumber?'Серия '+e(item.role.episodeNumber):'Серия'}</div>`}${item.text&&item.text!==messageKind(item.kind)?`<p>${e(item.text)}</p>`:''}<div class="notification-actions">${item.kind==='software_update'?`<button class="btn ghost" data-action="message-software" data-id="${e(item.role?.roleId?.slice(9)||'')}">К программе</button>`:''}${item.role?.roleId&&hasAssignedRole(roles(),item.role?.roleId)?`<button class="btn ghost" data-action="message-role" data-message="${item.id}" data-role="${e(item.role.roleId)}">Открыть роль</button>`:''}<button class="btn ghost delete-message" data-action="delete-message" data-message="${item.id}">Удалить</button>${!item.read?`<button class="btn ghost" data-action="read-message" data-message="${item.id}">Прочитано</button>`:''}</div></article>`).join('')||'<p class="muted">Назначения ролей, решения руководителя и изменения статусов появятся здесь.</p>'}</div>${messages.length>notificationLimit?'<button class="btn ghost" data-action="more-messages">Показать ещё</button>':''}`;
   if(!modal.open)modal.showModal();modal.querySelector('.notification-list').scrollTop=scroll;
 }
 function updateMessageBadge(){const node=document.querySelector('[data-message-count]');if(node){const failed=state.mailbox?.failed?.length||0;node.textContent=unread()||(failed?'!':'');node.hidden=!unread()&&!failed;}}
@@ -255,7 +258,6 @@ async function update(manual=false){
   const changed=JSON.stringify(next)!==lastStatus;state=next;lastStatus=JSON.stringify(next);
   if(lostAccess){studioCatalog=null;studioCatalogError='';modal.close();ui.query='';ui.expanded.clear();ui.collapsed.clear();render();return;}
   updateMessageBadge();renderTransferNotice();
-  if(changed&&modal.open&&modal.dataset.view==='recordings')renderActorFiles();
   if(changed&&modal.open&&modal.dataset.view==='messages')showMessages();
   if(changed&&(state.authenticated||!document.querySelector('#auth-form input:focus'))&&!modal.open)render();
   if(state.authenticated&&ui.page==='studioProjects'&&(manual||Date.now()-studioCatalogCheckedAt>=60000))await loadStudioCatalog();
@@ -288,10 +290,8 @@ document.addEventListener('click',async event=>{
       state=await api('roles/visibility',{roleId:button.dataset.role,hidden});
       render();toast(hidden?'Роль перемещена во вкладку «История».':'Роль возвращена в «Проекты».');
     }
-    if(action==='submit-role')showSubmission(button.dataset.role);
     if(action==='recordings')await showActorFiles();
-    if(action==='role-recordings')await showActorFiles(button.dataset.role);
-    if(action==='refresh-recordings'){state=await api('files/refresh',{});refreshFilesView();}
+    if(action==='refresh-recordings'){state=await api('files/refresh',{});render();}
     if(action==='upload-recording'){
       button.disabled=true;
       const selected=await openFileBrowser(api,{mode:'file',title:'Выбери запись для отправки'});
@@ -303,18 +303,29 @@ document.addEventListener('click',async event=>{
       else{button.disabled=false;}
     }
     if(action==='confirm-recording'){
-      button.disabled=true;state=await api('files/confirm',{fileId:button.dataset.file});refreshFilesView();toast('Запись подтверждена. Отправляем уведомление руководителю…');
+      button.disabled=true;state=await api('files/confirm',{fileId:button.dataset.file});render();toast('Запись подтверждена. Роль сдана.');
     }
     if(action==='delete-recording'){
       const file=(state.files||[]).find(f=>f.fileId===button.dataset.file);
       if(file&&window.confirm('Удалить «'+file.fileName+'» из облака? Восстановить файл будет нельзя.')){
-        button.disabled=true;state=await api('files/delete',{fileId:file.fileId});refreshFilesView();renderTransferNotice();toast('Файл удалён. Место в облаке освобождено.');
+        button.disabled=true;state=await api('files/delete',{fileId:file.fileId});render();renderTransferNotice();toast('Файл удалён. Место в облаке освобождено.');
       }
     }
-    if(action==='actor-transfer-cancel'){state=await api('transfer/cancel',{});renderTransferNotice();}
+    if(action==='actor-transfer-cancel'){state=await api('transfer/cancel',{});render();renderTransferNotice();}
     if(action==='actor-transfer-hide'){hiddenTransferId=state.transfer?.id||'';renderTransferNotice();}
-    if(action==='confirm-submit'){
-      button.disabled=true;state=await api('submit',{roleId:button.dataset.role});modal.close();render();toast('Сдача сохранена. Отправляем уведомление руководителю…');
+    if(action==='submit-without-upload'){
+      button.disabled=true;state=await api('submit',{roleId:button.dataset.role,withoutUpload:true});render();toast('Сдача без загрузки отправляется руководителю.');
+    }
+    if(action==='cancel-submission'){
+      const role=roles().find(item=>item.roleId===button.dataset.role);
+      const review=role?.review;
+      if(review?.state!=='pending'||!review.submissionId)return;
+      if(review.fileId&&!window.confirm(`Отменить сдачу? Файл «${review.fileName}» будет удалён из облака.`))return;
+      button.disabled=true;
+      try{
+        state=await api('submissions/cancel',{roleId:role.roleId,submissionId:review.submissionId,fileId:review.fileId||null});
+        render();toast('Сдача отменена.');
+      }catch(error){await update();throw error;}
     }
     if(action==='read-message'){state=await api('messages/read',{id:Number(button.dataset.message)});showMessages();updateMessageBadge();}
     if(action==='delete-message'){button.disabled=true;state=await api('messages/delete',{ids:[Number(button.dataset.message)]});showMessages();updateMessageBadge();toast('Уведомление удалено.');}
