@@ -308,28 +308,44 @@ func makeShortcuts(dest string) error {
 	target := filepath.Join(dest, "FundiVoiceActor.exe")
 	icon := filepath.Join(dest, "favicon.ico")
 	script := fmt.Sprintf(`$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 $exe = %s
 $cwd = %s
 $ico = %s
 $ws = New-Object -ComObject WScript.Shell
-$start = [IO.Path]::Combine([Environment]::GetFolderPath('Programs'),'Fundi Voice Actor')
-[IO.Directory]::CreateDirectory($start) | Out-Null
-$paths = @([IO.Path]::Combine([Environment]::GetFolderPath('Desktop'),'Fundi Voice Actor.lnk'),[IO.Path]::Combine($start,'Fundi Voice Actor.lnk'))
-foreach ($p in $paths) {
-  $shortcut = $ws.CreateShortcut($p)
+
+function Save-ActorShortcut($path, $description, $arguments = '') {
+  $shortcut = $ws.CreateShortcut($path)
   $shortcut.TargetPath = $exe
   $shortcut.WorkingDirectory = $cwd
   $shortcut.IconLocation = $ico
-  $shortcut.Description = 'Fundi Voice Actor'
+  $shortcut.Description = $description
+  $shortcut.Arguments = $arguments
   $shortcut.Save()
 }
-$recovery = $ws.CreateShortcut([IO.Path]::Combine($start,'Fundi Voice Actor - Откат версии.lnk'))
-$recovery.TargetPath=$exe
-$recovery.Arguments='--rollback'
-$recovery.WorkingDirectory=$cwd
-$recovery.IconLocation=$ico
-$recovery.Description='Выбрать одну из трёх предыдущих версий Actor'
-$recovery.Save()
+
+$startError = $null
+try {
+  $programs = [Environment]::GetFolderPath('Programs', 'Create')
+  if (-not $programs) { throw 'Папка меню «Пуск» недоступна.' }
+  $start = [IO.Path]::Combine($programs, 'Fundi Voice Actor')
+  [IO.Directory]::CreateDirectory($start) | Out-Null
+  Save-ActorShortcut ([IO.Path]::Combine($start, 'Fundi Voice Actor.lnk')) 'Fundi Voice Actor'
+  Save-ActorShortcut ([IO.Path]::Combine($start, 'Fundi Voice Actor - Откат версии.lnk')) 'Выбрать одну из трёх предыдущих версий Actor' '--rollback'
+} catch {
+  $startError = $_
+}
+
+try {
+  $desktop = [Environment]::GetFolderPath('DesktopDirectory')
+  if ($desktop) {
+    Save-ActorShortcut ([IO.Path]::Combine($desktop, 'Fundi Voice Actor.lnk')) 'Fundi Voice Actor'
+  }
+} catch {
+  # A redirected Desktop can be offline even when its path is available.
+}
+
+if ($startError) { throw $startError }
 `, psQuote(target), psQuote(dest), psQuote(icon))
 	tmp, err := os.CreateTemp("", "fundi-shortcuts-*.ps1")
 	if err != nil {
@@ -403,7 +419,7 @@ func main() {
 	if len(warnings) > 0 {
 		dialog(title, "Программа установлена, но есть замечания:\n\n"+strings.Join(warnings, "\n\n")+"\n\nВы можете запустить FundiVoiceActor.exe из папки установки.", 0x30)
 	}
-	done := "Fundi Voice Actor " + version + " успешно установлен!\n\nЯрлык добавлен на рабочий стол и в меню Пуск.\n\nТеперь при каждом запуске программа проверяет обновления в GitHub. В меню Пуск доступен откат на 1-3 версии.\n\nЗапустить программу сейчас?"
+	done := "Fundi Voice Actor " + version + " успешно установлен!\n\nВ меню «Пуск» доступны запуск программы и откат версии.\n\nТеперь при каждом запуске программа проверяет обновления в GitHub.\n\nЗапустить программу сейчас?"
 	if len(warnings) > 0 {
 		done = "Файлы Actor установлены.\n\nЗапустить FundiVoiceActor.exe сейчас?"
 	}
