@@ -135,8 +135,10 @@ namespace FundiVoice {
                     }
                     job.Progress(size);job.Commit();
                     if(!uploaded&&!VerifyRecording(fileId))throw new CloudFault(502,"upload_incomplete","Сервер ещё не подтвердил запись. Выбери тот же файл повторно или нажми «Проверить загрузку».");
-                    // A review notification is queued only after R2 size verification succeeds.
-                    Submit(roleId);RefreshFiles(false);
+                    job.SetPhase("Сдаём роль…");
+                    SubmitRecording(roleId,fileId);
+                    ForgetUpload(fileId);
+                    Poll();
                 }
             });
             return Status();
@@ -155,6 +157,16 @@ namespace FundiVoice {
             try{return JsonData.B(FileRequest("/v1/actor/files/complete","POST",new{fileId=fileId}),"uploaded");}
             catch(CloudFault problem){if(problem.Status==409&&problem.Code=="upload_incomplete")return false;throw;}
         }
+        void SubmitRecording(string roleId,string fileId){
+            bool supported;
+            lock(gate){
+                object view;session.TryGetValue("view",out view);
+                supported=JsonData.B(JsonData.D(view),"submissionActionsAvailable");
+            }
+            if(supported)
+                FileRequest("/v1/actor/submit","POST",new{roleId=roleId,fileId=fileId,requestId=fileId});
+            else Submit(roleId,false);
+        }
         public object ConfirmRecording(string fileId){
             if(transfers.Busy)throw new CloudFault(409,"transfer_busy","Сначала заверши или отмени текущую передачу.");
             Dictionary<string,object> file=null;
@@ -163,17 +175,21 @@ namespace FundiVoice {
             string roleId=JsonData.S(file,"roleId");RequireUploadRole(roleId);
             var result=FileRequest("/v1/actor/files/complete","POST",new{fileId=fileId});
             if(!JsonData.B(result,"uploaded"))throw new CloudFault(409,"upload_incomplete","Загрузка ещё не подтверждена.");
-            Submit(roleId);RefreshFiles(false);return Status();
+            SubmitRecording(roleId,fileId);ForgetUpload(fileId);Poll();return Status();
+        }
+        void ForgetUpload(string fileId){
+            string path=sessionFile+".uploads";
+            var journal=PrivateFile.Read(path);var remove=new List<string>();
+            foreach(var item in journal)if(JsonData.S(JsonData.D(item.Value),"fileId")==fileId)remove.Add(item.Key);
+            if(remove.Count==0)return;
+            foreach(string key in remove)journal.Remove(key);
+            PrivateFile.Save(path,journal);
         }
         public object DeleteRecording(string fileId){
             lock(syncGate){
                 if(transfers.Busy)throw new CloudFault(409,"transfer_busy","Сначала заверши или отмени текущую передачу, затем удали файл.");
                 FileRequest("/v1/actor/files/delete","POST",new{fileId=fileId});
-                string path=sessionFile+".uploads";
-                var journal=PrivateFile.Read(path);var remove=new List<string>();
-                foreach(var item in journal)if(JsonData.S(JsonData.D(item.Value),"fileId")==fileId)remove.Add(item.Key);
-                foreach(string key in remove)journal.Remove(key);
-                PrivateFile.Save(path,journal);RefreshFiles(false);return Status();
+                ForgetUpload(fileId);RefreshFiles(false);return Status();
             }
         }
         public object CancelTransfer(){transfers.Cancel();return Status();}

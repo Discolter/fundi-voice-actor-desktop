@@ -287,7 +287,10 @@ namespace FundiVoice {
             if(route=="files/confirm"){Json(stream,200,cloud.ConfirmRecording(JsonData.S(body,"fileId")));return;}
             if(route=="files/delete"){Json(stream,200,cloud.DeleteRecording(JsonData.S(body,"fileId")));return;}
             if(route=="transfer/cancel"){Json(stream,200,cloud.CancelTransfer());return;}
-            if(route=="submit"){Json(stream,200,cloud.Submit(JsonData.S(body,"roleId")));return;}
+            if(route=="submit"){Json(stream,200,cloud.Submit(JsonData.S(body,"roleId"),JsonData.B(body,"withoutUpload")));return;}
+            if(route=="submissions/cancel"){
+                Json(stream,200,cloud.CancelSubmission(JsonData.S(body,"roleId"),JsonData.N(body,"submissionId"),JsonData.S(body,"fileId")));return;
+            }
             if(route=="messages/read"){Json(stream,200,cloud.ReadMessage(JsonData.N(body,"id")));return;}
             if(route=="messages/delete"){
                 bool all=JsonData.B(body,"all");

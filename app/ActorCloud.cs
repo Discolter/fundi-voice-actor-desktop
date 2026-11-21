@@ -215,7 +215,7 @@ namespace FundiVoice {
                 default:return "Уведомление от студии";
             }
         }
-        public object Submit(string roleId){
+        public object Submit(string roleId,bool withoutUpload){
             lock(gate){
                 if(!Authenticated())throw new CloudFault(401,"login_required","Сначала войди в аккаунт.");
                 object raw;session.TryGetValue("view",out raw);var view=JsonData.D(raw);
@@ -224,9 +224,23 @@ namespace FundiVoice {
                 bool found=false;
                 foreach(var item in JsonData.A(JsonData.D(feed),"roles"))if(JsonData.S(JsonData.D(item),"roleId")==roleId)found=true;
                 if(!found)throw new CloudFault(404,"role_unavailable","Роль не найдена. Обнови проекты.");
-                if(!mailbox.HasPendingRole(roleId))mailbox.Queue("submit",new Dictionary<string,object>{{"roleId",roleId},{"requestId",Guid.NewGuid().ToString("D")}});
+                if(withoutUpload&&!JsonData.B(view,"submissionActionsAvailable"))
+                    throw new CloudFault(409,"server_outdated","Сервер ещё обновляется. Попробуй чуть позже.");
+                var submission=new Dictionary<string,object>{{"roleId",roleId},{"requestId",Guid.NewGuid().ToString("D")}};
+                if(withoutUpload)submission["withoutUpload"]=true;
+                if(!mailbox.HasPendingRole(roleId))mailbox.Queue("submit",submission);
             }
             ThreadPool.QueueUserWorkItem(delegate{Poll();});return Status();
+        }
+        public object CancelSubmission(string roleId,long submissionId,string fileId){
+            lock(syncGate){
+                if(transfers.Busy)throw new CloudFault(409,"transfer_busy","Сначала заверши или отмени текущую передачу.");
+                try{
+                    FileRequest("/v1/actor/submissions/cancel","POST",
+                        new{roleId=roleId,submissionId=submissionId,requestId=Guid.NewGuid().ToString("D"),fileId=fileId==""?null:fileId});
+                }finally{Poll();}
+                return Status();
+            }
         }
         public object ReadMessage(long id){mailbox.MarkRead(id);ThreadPool.QueueUserWorkItem(delegate{Poll();});return Status();}
         public object DeleteMessages(long[] ids,bool all){

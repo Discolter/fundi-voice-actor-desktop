@@ -13,10 +13,11 @@ export const stageLabel=status=>STAGES.find(x=>x[0]===status)?.[1]||'Стату�
 export function reviewedRole(role,reviews=[],pending=[]){
   const review=reviews.find(item=>item.roleId===role.roleId)||null;
   const queued=pending.some(item=>item.operation==='submit'&&item.body?.roleId===role.roleId);
-  const stage=role.status==='processed'?'processing':role.status;
+  const originalStage=review?.restoredStatus||role.status;
+  const stage=originalStage==='processed'?'processing':originalStage;
   const status=queued?'received':review?.state==='accepted'?'done':
     review?.state==='pending'?(stage==='processing'?'processing':'received'):
-    role.status==='recording'?'recording':review?.state==='retake'?'retake':review?.state==='pickup'?'pickup':stage;
+    stage==='recording'?'recording':review?.state==='retake'?'retake':review?.state==='pickup'?'pickup':stage;
   return {...role,status,review,queued,reviewLabel:queued?'Ожидает отправки':
     status==='received'&&review?.state==='pending'?'На проверке':stageLabel(status)};
 }
