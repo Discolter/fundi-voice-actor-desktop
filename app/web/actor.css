@@ -180,6 +180,9 @@ body[data-theme=light] .stage-pickup{--stage:#147572}
 .actor-role-submission .btn{font-size:11px;min-height:34px;padding:8px 10px;white-space:nowrap}
 .actor-confirm-actions{display:flex;justify-content:flex-end;gap:8px}
 .actor-confirm-actions .btn{min-width:72px}
+.shared-select-all,.shared-role-list label{display:flex;align-items:center;gap:10px;padding:9px 4px}
+.shared-role-list{max-height:min(46vh,330px);overflow:auto;border-block:1px solid var(--line);margin-bottom:16px}
+.shared-role-list input,.shared-select-all input{width:16px;height:16px;flex:none;accent-color:var(--accent)}
 @media(max-width:950px){
  .actor-role-wrap .actor-role{grid-template-columns:minmax(115px,1fr) minmax(105px,170px) auto}
  .actor-role-submission{grid-column:1/-1}

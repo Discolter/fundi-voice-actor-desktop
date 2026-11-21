@@ -13,11 +13,11 @@ namespace FundiVoice.Desktop {
         TransferJob current;
         public bool Busy { get { lock(gate)return current!=null&&current.Busy; } }
         public object View(){lock(gate)return current==null?null:current.View();}
-        public void Start(string direction,string name,long size,string roleId,Action<TransferJob> work){
+        public void Start(string direction,string name,long size,string roleId,Action<TransferJob> work,string[] roleIds=null){
             TransferJob job;
             lock(gate){
                 if(current!=null&&current.Busy)throw new CloudFault(409,"transfer_busy","Дождись завершения передачи или отмени её.");
-                current=job=new TransferJob(direction,name,size,roleId);
+                current=job=new TransferJob(direction,name,size,roleId,roleIds);
             }
             ThreadPool.QueueUserWorkItem(delegate{
                 try{work(job);job.Finish();}
@@ -36,20 +36,26 @@ namespace FundiVoice.Desktop {
     public sealed class TransferJob {
         readonly object gate=new object();
         readonly string id=Guid.NewGuid().ToString("N"),direction,name,roleId;
+        readonly string[] roleIds;
         readonly long total;
         string state="running",phase="Подключаемся…",error="",path="",fileId="";
-        long bytes;
+        long bytes,progressOffset;
         bool cancelled,committing;
         HttpWebRequest request;
-        public TransferJob(string direction,string name,long total,string roleId){this.direction=direction;this.name=name;this.total=total;this.roleId=roleId;}
+        public TransferJob(string direction,string name,long total,string roleId):this(direction,name,total,roleId,null){}
+        public TransferJob(string direction,string name,long total,string roleId,string[] roleIds){
+            this.direction=direction;this.name=name;this.total=total;this.roleId=roleId;
+            this.roleIds=roleIds??new[]{roleId};
+        }
         public bool Busy {get{lock(gate)return state=="running";}}
-        public object View(){lock(gate)return new{id=id,direction=direction,fileName=name,roleId=roleId,fileId=fileId,
+        public object View(){lock(gate)return new{id=id,direction=direction,fileName=name,roleId=roleId,roleIds=roleIds,fileId=fileId,
             state=state,phase=phase,error=error,bytes=bytes,totalBytes=total,path=path,
             folder=path==""?"":Path.GetDirectoryName(path),canCancel=state=="running"&&!committing&&!cancelled};}
         public void SetPhase(string value){lock(gate)phase=value;}
         public void SetFileId(string value){lock(gate)fileId=value;}
         public void SetPath(string value){lock(gate)path=value;}
-        public void Progress(long value){lock(gate)bytes=value;Check();}
+        public void SetProgressOffset(long value){lock(gate){progressOffset=value;bytes=value;}}
+        public void Progress(long value){lock(gate)bytes=progressOffset+value;Check();}
         public void Check(){lock(gate){if(cancelled)throw new OperationCanceledException();}}
         public void Track(HttpWebRequest value){lock(gate){if(cancelled){value.Abort();throw new OperationCanceledException();}request=value;}}
         public void Release(){lock(gate)request=null;}
@@ -176,15 +182,21 @@ namespace FundiVoice.Desktop {
     public static class NativeFileDialogs {
         static readonly object gate=new object();
         public static string Pick(bool folder){
+            var selected=PickPaths(folder,false);
+            return selected.Length==0?"":selected[0];
+        }
+        public static string[] PickRecordings(bool multiple){return PickPaths(false,multiple);}
+        static string[] PickPaths(bool folder,bool multiple){
             lock(gate){
-                string selected="";Exception failure=null;
+                string[] selected=new string[0];Exception failure=null;
                 var thread=new Thread(delegate(){
                     try{using(var owner=new Form{TopMost=true,ShowInTaskbar=false,Opacity=0,Width=1,Height=1,StartPosition=FormStartPosition.CenterScreen}){
                         owner.Show();owner.Activate();
                         if(folder){using(var dialog=new FolderBrowserDialog{Description="Fundi Voice — куда сохранить запись?",ShowNewFolderButton=true})
-                            if(dialog.ShowDialog(owner)==DialogResult.OK)selected=dialog.SelectedPath;}
-                        else{using(var dialog=new OpenFileDialog{Title="Fundi Voice — выбери готовую запись",CheckFileExists=true,Multiselect=false,
-                            Filter="Записи и архивы|*.wav;*.zip;*.flac;*.mp3;*.ogg"})if(dialog.ShowDialog(owner)==DialogResult.OK)selected=dialog.FileName;}
+                            if(dialog.ShowDialog(owner)==DialogResult.OK)selected=new[]{dialog.SelectedPath};}
+                        else{using(var dialog=new OpenFileDialog{Title=multiple?"Fundi Voice — выбери аудиофайлы":"Fundi Voice — выбери готовую запись",
+                            CheckFileExists=true,Multiselect=multiple,Filter="Записи и архивы|*.wav;*.zip;*.flac;*.mp3;*.ogg"})
+                            if(dialog.ShowDialog(owner)==DialogResult.OK)selected=dialog.FileNames;}
                     }}catch(Exception problem){failure=problem;}
                 });
                 thread.SetApartmentState(ApartmentState.STA);thread.Start();thread.Join();

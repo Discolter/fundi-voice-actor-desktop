@@ -202,13 +202,57 @@ function roleSubmissionActions(role,hidden){
   const transfer=state.transfer;
   const busy=transfer?.state==='running';
   const enabled=state.view?.submissionActionsAvailable===true;
-  if(busy&&transfer.roleId===role.roleId)
+  if(busy&&(transfer.roleIds||[transfer.roleId]).includes(role.roleId))
     return transfer.canCancel?'<button class="btn ghost danger" data-action="actor-transfer-cancel">Отменить загрузку</button>':`<span class="muted">${e(transfer.phase)}</span>`;
   if(role.queued)return '';
   if(enabled&&role.review?.state==='pending'&&role.review.submissionId>0)
     return `<button class="btn ghost danger" data-action="cancel-submission" data-role="${id}" ${busy?'disabled':''}>Отменить сдачу</button>`;
-  return `<button class="btn ghost" data-action="submit-without-upload" data-role="${id}" ${enabled?'':'disabled'}>Сдать без загрузки</button>
-    <button class="btn primary" data-action="upload-recording" data-role="${id}" ${enabled&&!busy?'':'disabled'}>Загрузить файл</button>`;
+  const disabled=enabled&&!busy?'':'disabled';
+  const multiple=state.view?.recordingBatchesAvailable===true;
+  const shared=multiple&&sharedRecordingRoles(role).length>1;
+  return `<button class="btn ghost" data-action="submit-without-upload" data-role="${id}" ${disabled}>Сдать без загрузки</button>
+    <button class="btn primary" data-action="upload-recording" data-role="${id}" ${disabled}>${multiple?'Загрузить файлы':'Загрузить файл'}</button>
+    ${shared?`<button class="btn ghost" data-action="shared-recording" data-role="${id}" ${disabled}>Один файл на несколько ролей</button>`:''}`;
+}
+function sharedRecordingRoles(role){
+  return roles().filter(item=>item.projectId===role.projectId&&item.episodeId===role.episodeId&&
+    !item.queued&&item.status!=='done'&&item.review?.state!=='pending');
+}
+function showSharedRecording(roleId){
+  const role=roles().find(item=>item.roleId===roleId);
+  if(!role||modal.open||state.transfer?.state==='running'||state.view?.recordingBatchesAvailable!==true)return;
+  const targets=sharedRecordingRoles(role);
+  if(targets.length<2)return;
+  modal.dataset.view='shared-recording';
+  modal.innerHTML=`<div class="modal-head">
+    <div><h2 id="modal-title">Один файл на несколько ролей</h2>
+    <span class="muted">${e(role.projectTitle)} · Серия ${e(role.episodeNumber||'—')}</span></div>
+    </div><label class="shared-select-all"><input type="checkbox" data-shared-select-all checked> Выбрать все роли серии</label>
+    <div class="shared-role-list">${targets.map(item=>`<label><input type="checkbox" name="shared-role" value="${e(item.roleId)}" checked> ${e(item.character)}</label>`).join('')}</div>
+    <div class="actor-confirm-actions">
+      <button type="button" class="btn ghost" data-action="close-modal" autofocus>Отмена</button>
+      <button type="button" class="btn primary" data-action="upload-shared-recording" data-role="${e(roleId)}">Выбрать файл</button>
+    </div>`;
+  modal.showModal();
+}
+modal.addEventListener('change',event=>{
+  if(modal.dataset.view!=='shared-recording')return;
+  const options=[...modal.querySelectorAll('input[name=shared-role]')];
+  const all=modal.querySelector('[data-shared-select-all]');
+  if(event.target===all)options.forEach(option=>{option.checked=all.checked;});
+  const chosen=options.filter(option=>option.checked).length;
+  all.checked=chosen===options.length;
+  all.indeterminate=chosen>0&&chosen<options.length;
+  modal.querySelector('[data-action="upload-shared-recording"]').disabled=chosen<2;
+});
+async function chooseRecordings(roleId,roleIds=[roleId]){
+  if(!state.authenticated||state.transfer?.state==='running')return;
+  const multiple=roleIds.length===1&&state.view?.recordingBatchesAvailable===true;
+  const selected=await openFileBrowser(api,{mode:'file',multiple,title:multiple?'Выбери записи для отправки':'Выбери запись для отправки'});
+  if(!selected)return;
+  const paths=selected.paths||(selected.path?[selected.path]:[]);
+  const result=await api('files/upload',{roleId,roleIds,multiple,paths});
+  if(!result.cancelled){state=result;render();renderTransferNotice();}
 }
 function confirmSubmissionWithoutUpload(roleId){
   const role=roles().find(item=>item.roleId===roleId);
@@ -242,8 +286,11 @@ function actorFilesContent(){
   const busy=state.transfer?.state==='running';
   return `${storageMeter(state.usedBytes,state.quotaBytes)}<div class="file-toolbar"><button class="btn ghost" data-action="refresh-recordings">Обновить список</button></div>${state.fileError?`<p class="file-error">${e(state.fileError)}</p>`:''}<div class="recording-list">${items.map(f=>{
     const role=roles().find(r=>r.roleId===f.roleId);
-    return `<article class="recording-entry"><strong>${e(f.fileName)}</strong><div class="recording-context">${role?e(role.character+' · '+role.projectTitle):'Роль больше не назначена тебе'}</div><div class="recording-meta"><span>${e(formatBytes(f.size))}</span><span>${e(stamp(f.createdAt))}</span><span>${e(fileStatus(f.status))}</span></div><div class="recording-actions">${role&&role.status!=='done'&&role.review?.state!=='pending'&&!f.submitted&&f.status!=='deleting'?`<button class="btn ghost" data-action="confirm-recording" data-file="${e(f.fileId)}" ${busy||role.queued?'disabled':''}>${f.status==='ready'?'Сдать загруженное':'Проверить загрузку'}</button>`:''}<button class="btn ghost danger" data-action="delete-recording" data-file="${e(f.fileId)}" ${busy?'disabled':''}>${f.status==='deleting'?'Повторить удаление':'Удалить из облака'}</button></div></article>`;
-  }).join('')||'<div class="recording-empty">Файлов пока нет. Открой роль и нажми «Загрузить файл».</div>'}</div><p class="file-hint">Здесь можно удалить готовую запись или незавершённую загрузку и освободить место. Во время передачи сначала нажми «Отменить передачу».</p>`;
+    const linked=f.roles||[];
+    const context=linked.length>1?'Общий файл · '+linked.map(item=>item.character).join(' · '):
+      (role?role.character+' · '+role.projectTitle:linked[0]?.character||'Роль больше не назначена тебе');
+    return `<article class="recording-entry"><strong>${e(f.fileName)}</strong><div class="recording-context">${e(context)}</div><div class="recording-meta"><span>${e(formatBytes(f.size))}</span><span>${e(stamp(f.createdAt))}</span><span>${e(fileStatus(f.status))}</span></div><div class="recording-actions">${role&&role.status!=='done'&&role.review?.state!=='pending'&&!f.submitted&&f.status!=='deleting'?`<button class="btn ghost" data-action="confirm-recording" data-file="${e(f.fileId)}" ${busy||role.queued?'disabled':''}>${f.status==='ready'?'Сдать загруженное':'Проверить загрузку'}</button>`:''}${linked.length>1?'':`<button class="btn ghost danger" data-action="delete-recording" data-file="${e(f.fileId)}" ${busy?'disabled':''}>${f.status==='deleting'?'Повторить удаление':'Удалить из облака'}</button>`}</div></article>`;
+  }).join('')||'<div class="recording-empty">Файлов пока нет. Их можно добавить в карточке роли.</div>'}</div><p class="file-hint">Во время передачи сначала нажми «Отменить передачу».</p>`;
 }
 function showMessages(){
   const scroll=modal.querySelector('.notification-list')?.scrollTop||0;
@@ -306,13 +353,17 @@ document.addEventListener('click',async event=>{
     if(action==='refresh-recordings'){state=await api('files/refresh',{});render();}
     if(action==='upload-recording'){
       button.disabled=true;
-      const selected=await openFileBrowser(api,{mode:'file',title:'Выбери запись для отправки'});
-      if(!selected){button.disabled=false;return;}
-      const payload={roleId:button.dataset.role};
-      if(selected.path)payload.path=selected.path;
-      const result=await api('files/upload',payload);
-      if(!result.cancelled){state=result;modal.close();render();renderTransferNotice();}
-      else{button.disabled=false;}
+      try{await chooseRecordings(button.dataset.role);}
+      finally{if(button.isConnected)button.disabled=false;}
+    }
+    if(action==='shared-recording')showSharedRecording(button.dataset.role);
+    if(action==='upload-shared-recording'){
+      if(modal.dataset.view!=='shared-recording')return;
+      const roleIds=[...modal.querySelectorAll('input[name=shared-role]:checked')].map(input=>input.value);
+      if(roleIds.length<2)return;
+      const roleId=roleIds.includes(button.dataset.role)?button.dataset.role:roleIds[0];
+      modal.close();
+      await chooseRecordings(roleId,roleIds);
     }
     if(action==='confirm-recording'){
       button.disabled=true;state=await api('files/confirm',{fileId:button.dataset.file});render();toast('Запись подтверждена. Роль сдана.');
@@ -338,7 +389,10 @@ document.addEventListener('click',async event=>{
       const role=roles().find(item=>item.roleId===button.dataset.role);
       const review=role?.review;
       if(review?.state!=='pending'||!review.submissionId)return;
-      if(review.fileId&&!window.confirm(`Отменить сдачу? Файл «${review.fileName}» будет удалён из облака.`))return;
+      const consequence=review.sharedFile?'Общий файл останется у остальных персонажей.':
+        review.fileCount>1?`Файлов этой сдачи будет удалено из облака: ${review.fileCount}.`:
+        `Файл «${review.fileName}» будет удалён из облака.`;
+      if(review.fileId&&!window.confirm('Отменить сдачу? '+consequence))return;
       button.disabled=true;
       try{
         state=await api('submissions/cancel',{roleId:role.roleId,submissionId:review.submissionId,fileId:review.fileId||null});

@@ -138,7 +138,8 @@ namespace FundiVoice {
                             bool binary=method=="PUT"&&castPart.Success;
                             int length=0;
                             if(headers.ContainsKey("Content-Length")&&!Int32.TryParse(headers["Content-Length"],out length))throw new ArgumentException("Неверный запрос.");
-                            if(length<0||length>(binary?8*1024*1024:16384)){Json(stream,413,new{error="Слишком большой запрос."});return;}
+                            int bodyLimit=binary?8*1024*1024:path=="/api/files/upload"?6*1024*1024:16384;
+                            if(length<0||length>bodyLimit){Json(stream,413,new{error="Слишком большой запрос."});return;}
                             byte[] body=new byte[length];int read=0;
                             while(read<length){int count=stream.Read(body,read,length-read);if(count==0)throw new IOException();read+=count;}
                             if(binary){Json(stream,200,cloud.CastingPart(castPart.Groups[1].Value,castPart.Groups[2].Value,body));return;}
@@ -274,15 +275,19 @@ namespace FundiVoice {
             if(route=="file-browser"){Json(stream,200,LocalBrowse(body,false));return;}
             if(route=="files/upload"){
                 string roleId=JsonData.S(body,"roleId");cloud.RequireUploadRole(roleId);
-                string source=JsonData.S(body,"path");
-                if(String.IsNullOrWhiteSpace(source))source=NativeFileDialogs.Pick(false);
-                else {
-                    source=LocalBrowsePath(source,false);
-                    if(!LocalAudioExtensions.Contains(Path.GetExtension(source)))
-                        throw new CloudFault(400,"invalid_file_type","Выбери WAV, FLAC, MP3, OGG, AAC, M4A или ZIP.");
+                var roleIds=JsonData.A(body,"roleIds").Select(id=>id as string??"").ToArray();
+                if(roleIds.Length==0)roleIds=new[]{roleId};
+                var paths=JsonData.A(body,"paths").Select(item=>item as string??"").ToArray();
+                string path=JsonData.S(body,"path");
+                if(paths.Length==0&&!String.IsNullOrWhiteSpace(path))paths=new[]{path};
+                if(paths.Length==0)paths=NativeFileDialogs.PickRecordings(roleIds.Length==1&&JsonData.B(body,"multiple"));
+                else{
+                    paths=paths.Select(source=>LocalBrowsePath(source,false)).ToArray();
+                    if(paths.Any(source=>!LocalAudioExtensions.Contains(Path.GetExtension(source))))
+                        throw new CloudFault(400,"invalid_file_type","Выбери WAV, FLAC, MP3, OGG или ZIP.");
                 }
-                if(source==""){Json(stream,200,new{cancelled=true});return;}
-                Json(stream,200,cloud.UploadRecording(roleId,source));return;
+                if(paths.Length==0){Json(stream,200,new{cancelled=true});return;}
+                Json(stream,200,cloud.UploadRecordings(roleId,roleIds,paths));return;
             }
             if(route=="files/confirm"){Json(stream,200,cloud.ConfirmRecording(JsonData.S(body,"fileId")));return;}
             if(route=="files/delete"){Json(stream,200,cloud.DeleteRecording(JsonData.S(body,"fileId")));return;}
