@@ -22,8 +22,14 @@ paths.casting='M9 5a3 3 0 0 1 6 0v7a3 3 0 0 1-6 0ZM5 10v2a7 7 0 0 0 14 0v-2M12 1
 const needsCorrection=items=>items.some(role=>role.status==='retake'||role.status==='pickup');
 const app=document.querySelector('#app'),modal=document.querySelector('#modal');
 let state={authenticated:false,server:'',username:'',view:null,error:'',lastSync:'',busy:false};
+const PROJECT_PRIORITIES=[['high','Высокий приоритет'],['normal','Средний приоритет'],['low','Низкий приоритет']];
+const collapsedPrioritySections=new Set();
 let ui={page:'projects',query:'',filter:'all',roleSort:'default',activate:false,recover:false,theme:'aurora',motion:true,expanded:new Set(),collapsed:new Set()},token='',formBusy=false,lastStatus='';
-try{const saved=JSON.parse(localStorage.getItem('fundi-actor-appearance')||'{}');if(THEMES.some(t=>t[0]===saved.theme))ui.theme=saved.theme;if(saved.motion===false)ui.motion=false;if(ACTOR_ROLE_SORTS.some(([id])=>id===saved.roleSort))ui.roleSort=saved.roleSort;}catch{}
+try{const saved=JSON.parse(localStorage.getItem('fundi-actor-appearance')||'{}');if(THEMES.some(t=>t[0]===saved.theme))ui.theme=saved.theme;if(saved.motion===false)ui.motion=false;if(ACTOR_ROLE_SORTS.some(([id])=>id===saved.roleSort))ui.roleSort=saved.roleSort;
+  if(Array.isArray(saved.collapsedPrioritySections))for(const [key] of PROJECT_PRIORITIES){
+    if(saved.collapsedPrioritySections.includes(key))collapsedPrioritySections.add(key);
+  }
+}catch{}
 let notificationLimit=50,hiddenTransferId='';
 
 let studioCatalog=null,studioCatalogLoading=false,studioCatalogError='',studioCatalogCheckedAt=0;
@@ -156,14 +162,25 @@ function renderTieredActorRoles(items,renderRole){
 function renderProjects(all){
   const projects=sortActorProjects(groupProjects(all,ui.query),ui.roleSort);
   if(!projects.length)return empty(ui.query?'Ничего не найдено':'Нет ролей в проектах',ui.query?'Попробуй другой запрос.':'Принятые роли могут находиться во вкладке «История».');
-  return `<div class="actor-role-sort-bar">${roleSortControl()}</div><div class="project-stack">${projects.map((p,index)=>{
+  const sections=PROJECT_PRIORITIES.map(([key,title])=>{
+    const group=projects.filter(p=>{
+      const priority=p.roles[0]?.projectPriority;
+      return (priority==='high'||priority==='low'?priority:'normal')===key;
+    });
+    if(!group.length)return '';
+    return `<details class="project-priority-section" data-project-priority="${key}" ${collapsedPrioritySections.has(key)?'':'open'}>
+      <summary class="project-priority-heading"><span class="project-priority-mark" aria-hidden="true"></span><strong>${title}</strong><span class="project-priority-count">${group.length}</span><span class="project-priority-chevron" aria-hidden="true"></span></summary>
+      <div class="project-stack">${group.map(p=>renderActorProject(p,projects.length)).join('')}</div></details>`;
+  }).join('');
+  return `<div class="actor-role-sort-bar">${roleSortControl()}</div><div class="project-priority-sections">${sections}</div>`;
+}
+function renderActorProject(p,projectCount){
     const debt=p.roles.filter(isDebt).length,done=p.roles.filter(r=>r.status==='done').length;
     const sources=[...new Set(p.roles.map(r=>r.sourceUrl).filter(telegramSourceLink))];
     const projectSource=sources.length===1?sources[0]:'';
     const title=projectSource?`<a class="project-source-link" href="${e(projectSource)}" target="_blank" rel="noopener noreferrer" title="Открыть исходники в Telegram">${e(p.title)} ↗</a>`:`${e(p.title)}`;
 
-    return `<details class="actor-project" data-project="${e(p.id)}" ${ui.expanded.has(p.id)||(projects.length<4&&!ui.collapsed.has(p.id))?'open':''}><summary><span class="project-monogram">${e(p.title.slice(0,1))}</span><span class="project-heading"><strong>${title}</strong><small>${p.season?'Сезон '+e(p.season)+' · ':''}${p.episodes.size} сер. · ${p.roles.length} рол. · ${actorProjectWorkload(p).known?`Σ ${actorProjectWorkload(p).total} репл.${actorProjectWorkload(p).missing?' (частично)':''}`:'Реплики не указаны'}</small></span><span class="project-meta">${ageBadge(p.roles[0]?.projectCreatedAt,true)}${debt?`<span class="debt-count">${debt} к записи</span>`:`<span class="all-done">${done===p.roles.length?'Всё принято':'В работе'}</span>`}</span>${icon('chevron')}</summary><div class="project-episodes">${[...p.episodes.values()].sort((a,b)=>Number(a.number)-Number(b.number)).map(ep=>`<section class="actor-episode"><h3>${ep.number?'Серия '+e(ep.number):e(ep.title||'Серия')}${ep.title&&ep.number?` <span>· ${e(ep.title)}</span>`:''}${[...new Set(ep.roles.map(r=>r.sourceUrl).filter(telegramSourceLink))][0]?` <a class="episode-source-link" href="${e([...new Set(ep.roles.map(r=>r.sourceUrl).filter(telegramSourceLink))][0])}" target="_blank" rel="noopener noreferrer">Исходники ↗</a>`:''}</h3><div class="role-list">${renderTieredActorRoles(sortActorRoles(ep.roles,ui.roleSort),r=>roleRow(r,false))}</div></section>`).join('')}</div></details>`;
-  }).join('')}</div>`;
+    return `<details class="actor-project" data-project="${e(p.id)}" ${ui.expanded.has(p.id)||(projectCount<4&&!ui.collapsed.has(p.id))?'open':''}><summary><span class="project-monogram">${e(p.title.slice(0,1))}</span><span class="project-heading"><strong>${title}</strong><small>${p.season?'Сезон '+e(p.season)+' · ':''}${p.episodes.size} сер. · ${p.roles.length} рол. · ${actorProjectWorkload(p).known?`Σ ${actorProjectWorkload(p).total} репл.${actorProjectWorkload(p).missing?' (частично)':''}`:'Реплики не указаны'}</small></span><span class="project-meta">${ageBadge(p.roles[0]?.projectCreatedAt,true)}${debt?`<span class="debt-count">${debt} к записи</span>`:`<span class="all-done">${done===p.roles.length?'Всё принято':'В работе'}</span>`}</span>${icon('chevron')}</summary><div class="project-episodes">${[...p.episodes.values()].sort((a,b)=>Number(a.number)-Number(b.number)).map(ep=>`<section class="actor-episode"><h3>${ep.number?'Серия '+e(ep.number):e(ep.title||'Серия')}${ep.title&&ep.number?` <span>· ${e(ep.title)}</span>`:''}${[...new Set(ep.roles.map(r=>r.sourceUrl).filter(telegramSourceLink))][0]?` <a class="episode-source-link" href="${e([...new Set(ep.roles.map(r=>r.sourceUrl).filter(telegramSourceLink))][0])}" target="_blank" rel="noopener noreferrer">Исходники ↗</a>`:''}</h3><div class="role-list">${renderTieredActorRoles(sortActorRoles(ep.roles,ui.roleSort),r=>roleRow(r,false))}</div></section>`).join('')}</div></details>`;
 }
 function renderHistory(hiddenRoles){
   const filtered=hiddenRoles.filter(r=>matches(r,ui.query));
@@ -323,6 +340,14 @@ async function update(manual=false){
   if(state.authenticated&&ui.page==='software')void software.refresh({quiet:!manual});
 }
 document.addEventListener('click',async event=>{
+  const priorityHeading=event.target.closest('summary.project-priority-heading');
+  if(priorityHeading){
+    event.preventDefault();
+    const section=priorityHeading.parentElement,key=section.dataset.projectPriority;
+    section.open=!section.open;
+    if(section.open)collapsedPrioritySections.delete(key);else collapsedPrioritySections.add(key);
+    saveAppearance();return;
+  }
   const button=event.target.closest('button');if(!button)return;
   try{
     if(button.dataset.page){ui.page=button.dataset.page;ui.query='';render();if(ui.page==='studioProjects')await loadStudioCatalog();}
@@ -419,7 +444,7 @@ document.addEventListener('click',async event=>{
   }catch(error){toast(error.message,true);}
   finally{if(button.isConnected)button.disabled=false;}
 });
-function saveAppearance(){try{localStorage.setItem('fundi-actor-appearance',JSON.stringify({theme:ui.theme,motion:ui.motion,roleSort:ui.roleSort}));}catch{}}
+function saveAppearance(){try{localStorage.setItem('fundi-actor-appearance',JSON.stringify({theme:ui.theme,motion:ui.motion,roleSort:ui.roleSort,collapsedPrioritySections:[...collapsedPrioritySections]}));}catch{}}
 document.addEventListener('input',event=>{if(event.target.id==='search'){ui.query=event.target.value;render();}});
 document.addEventListener('toggle',event=>{
   const element=event.target;if(!element.matches?.('details.actor-project'))return;
